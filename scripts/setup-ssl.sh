@@ -16,7 +16,7 @@ mkdir -p ./certbot/conf
 mkdir -p ./certbot/www
 
 # Step 1: Ensure Nginx is running in HTTP mode to handle ACME challenge
-echo "1. Checking Nginx status..."
+echo "1. Ensuring Nginx is running for ACME challenge..."
 docker compose up -d nginx
 
 # Step 2: Request SSL Certificate from Let's Encrypt
@@ -31,7 +31,7 @@ docker compose run --rm --entrypoint "\
 
 # Step 3: Check if certificate was issued
 if [ -f "./certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
-  echo "✅ Certificate generated successfully at ./certbot/conf/live/$DOMAIN/"
+  echo "✅ Certificate verified at ./certbot/conf/live/$DOMAIN/fullchain.pem"
   
   # Step 4: Activate HTTPS Nginx config
   echo "3. Activating HTTPS configuration in Nginx..."
