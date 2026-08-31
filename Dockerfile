@@ -12,6 +12,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Ensure essential directories exist
+RUN mkdir -p /app/public /app/data
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
@@ -28,15 +31,15 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Set up public folder
-COPY --from=builder /app/public ./public
+# Ensure app directories and permissions
+RUN mkdir -p /app/public /app/data /app/.next/static && \
+    chown -R nextjs:nodejs /app
 
-# Copy standalone build and static assets
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy built assets with appropriate permissions
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
-
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 USER nextjs
 
