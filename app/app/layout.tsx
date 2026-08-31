@@ -36,22 +36,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/auth');
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth');
+      } else {
+        router.replace('/auth');
+      }
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black dark:bg-black light:bg-neutral-50 text-neutral-400">
-        <div className="text-xs font-mono tracking-widest uppercase">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-neutral-400">
+        <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-700 flex items-center justify-center font-mono text-xs font-bold text-white mb-3 animate-pulse">
+          ED
+        </div>
+        <div className="text-xs font-mono tracking-widest uppercase text-neutral-300">
           Electrodrivers OS...
         </div>
+        {!loading && !user && (
+          <div className="text-[11px] text-neutral-500 mt-2">
+            Перенаправление на страницу входа...
+          </div>
+        )}
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   if (user.status === 'pending') {
