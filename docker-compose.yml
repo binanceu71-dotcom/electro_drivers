@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Production Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: electrodrivers_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-electrodrivers_db}
+      POSTGRES_USER: ${POSTGRES_USER:-electro_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisToVerySecurePassword2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-electro_admin} -d ${POSTGRES_DB:-electrodrivers_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - electro_network
+
+  # 2. Next.js Web Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: electrodrivers_app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-electro_admin}:${POSTGRES_PASSWORD:-ChangeThisToVerySecurePassword2026!}@postgres:5432/${POSTGRES_DB:-electrodrivers_db}
+      SESSION_SECRET: ${SESSION_SECRET:-electrodrivers_super_secret_session_key_production_2026}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://portal.electrodrivers.ru}
+    volumes:
+      - app_data:/app/data
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - electro_network
+
+  # 3. Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: electrodrivers_nginx
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - certbot_challenge:/var/www/certbot
+    networks:
+      - electro_network
+
+  # 4. Certbot for Let's Encrypt SSL Auto-Renewal
+  certbot:
+    image: certbot/certbot
+    container_name: electrodrivers_certbot
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - certbot_challenge:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+    driver: local
+  app_data:
+    driver: local
+  certbot_etc:
+    driver: local
+  certbot_var:
+    driver: local
+  certbot_challenge:
+    driver: local
+
+networks:
+  electro_network:
+    driver: bridge

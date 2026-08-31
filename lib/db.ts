@@ -1,0 +1,836 @@
+import fs from 'fs';
+import path from 'path';
+import { 
+  UserProfile, Space, Article, AuditLog, 
+  OnboardingStep, UserOnboardingProgress, EmployeeReport, ReportStatus, ReportType 
+} from './types';
+
+interface DatabaseSchema {
+  users: Array<UserProfile & { password_hash: string }>;
+  spaces: Space[];
+  articles: Article[];
+  audit_logs: AuditLog[];
+  onboarding_steps: OnboardingStep[];
+  user_progress: Record<string, UserOnboardingProgress>;
+  reports: EmployeeReport[];
+}
+
+const DB_FILE_PATH = path.join(process.cwd(), 'data', 'electrodrivers_db.json');
+
+const INITIAL_SEED: DatabaseSchema = {
+  users: [
+    {
+      id: 'usr-root-001',
+      email: 'admin@electrodrivers.ru',
+      telegram_nickname: '@electrodrivers_admin',
+      role: 'superadmin',
+      status: 'active',
+      full_name: 'Администратор системы',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      password_hash: 'AdminPassword2026',
+    }
+  ],
+  spaces: [
+    {
+      id: 'space-regulations',
+      name: 'Регламенты и стандарты',
+      slug: 'regulations',
+      description: 'Основные корпоративные правила, инструкции и регламенты работы участников.',
+      order: 1
+    },
+    {
+      id: 'space-charging',
+      name: 'Зарядная инфраструктура',
+      slug: 'charging-infrastructure',
+      description: 'Стандарты зарядных станций (CCS2, GB/T, Type 2), правила подключения и эксплуатация.',
+      order: 2
+    },
+    {
+      id: 'space-safety',
+      name: 'Безопасность и регламенты ЧС',
+      slug: 'safety-protocols',
+      description: 'Инструкции по технической безопасности при работе с высоковольтными системами.',
+      order: 3
+    },
+    {
+      id: 'space-it-api',
+      name: 'IT-инфраструктура и API',
+      slug: 'it-infrastructure-api',
+      description: 'Техническая документация, протоколы телеметрии, интеграции и спецификации API.',
+      order: 4
+    }
+  ],
+  articles: [
+    {
+      id: 'art-001',
+      space_id: 'space-regulations',
+      title: 'Регламент допуска и подготовки к выходу на смену',
+      slug: 'operational-checklist',
+      excerpt: 'Обязательный порядок проверки состояния оборудования, батареи и документов перед началом работы.',
+      author_id: 'usr-root-001',
+      author_name: 'Администратор системы',
+      author_role: 'superadmin',
+      parent_id: null,
+      order: 1,
+      tags: ['регламент', 'инструкция', 'онбординг'],
+      is_pinned: true,
+      views_count: 1,
+      read_time_minutes: 4,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      content: `## 1. Общие положения
+
+Настоящий регламент определяет порядок подготовки и проверки оборудования участниками системы **Electrodrivers**.
+
+---
+
+### 2. Обязательный чек-лист перед началом работы:
+
+- [x] Проверка авторизации в корпоративном портале
+- [x] Контроль уровня заряда батареи (не менее 80% перед выходом на линию)
+- [x] Визуальный осмотр кабелей и коннекторов
+- [ ] Фиксация показаний одометра
+
+> ⚠️ **Важно:** При обнаружении любых повреждений кабелей или изоляции немедленно сообщите в диспетчерскую службу через [Telegram-бота](https://t.me/ElectrodriversBot).
+
+---
+
+### 3. Фото и видео фиксация
+
+При передаче смены обязательно прикрепите фотоотчет показаний приборов:
+
+![Приборная панель и заряд](https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800&auto=format&fit=crop&q=80)`
+    },
+    {
+      id: 'art-002',
+      space_id: 'space-charging',
+      title: 'Стандарты зарядных станций и протоколы подключения',
+      slug: 'charging-standards-overview',
+      excerpt: 'Спецификация стандартов быстрой и медленной зарядки, требования безопасности и регламенты хабов.',
+      author_id: 'usr-root-001',
+      author_name: 'Администратор системы',
+      author_role: 'superadmin',
+      parent_id: null,
+      order: 1,
+      tags: ['зарядка', 'стандарты', 'GB/T', 'CCS2'],
+      is_pinned: true,
+      views_count: 1,
+      read_time_minutes: 5,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      content: `## Зарядные протоколы и стандарты
+
+В инфраструктуре Electrodrivers применяются стандарты быстрой (DC) и переменной (AC) зарядки.
+
+---
+
+### Спецификация разъемов:
+
+| Стандарт | Тип тока | Максимальная мощность | Применение |
+| :--- | :--- | :--- | :--- |
+| **CCS Combo 2** | Постоянный (DC) | до 360 кВт | Скоростные магистральные хабы |
+| **GB/T DC** | Постоянный (DC) | до 250 кВт | Городские ультрабыстрые станции |
+| **Type 2 (Mennekes)** | Переменный (AC) | до 22 кВт | Ночная парковочная зарядка |
+
+---
+
+### Видеоинструкция по подключению:
+
+[Смотреть обучающее видео по высоковольтным коннекторам](https://electrodrivers.ru/video/charging-guide.mp4)`
+    },
+    {
+      id: 'art-003',
+      space_id: 'space-safety',
+      title: 'Инструкция по безопасности при работе с высоковольтными системами',
+      slug: 'high-voltage-safety',
+      excerpt: 'Правила техники безопасности, действия в нештатных ситуациях и регламент оповещения.',
+      author_id: 'usr-root-001',
+      author_name: 'Администратор системы',
+      author_role: 'superadmin',
+      parent_id: null,
+      order: 1,
+      tags: ['безопасность', 'высокое напряжение', 'регламент'],
+      is_pinned: true,
+      views_count: 1,
+      read_time_minutes: 4,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      content: `## Техническая безопасность
+
+Тяговые батареи и силовая проводка находятся под постоянным напряжением от 400V до 800V DC.
+
+---
+
+### Действия при возникновении неисправности:
+
+1. **Немедленно обесточить систему:** Выключить зажигание и активировать сервисный размыкатель.
+2. **Оценить обстановку:** Отойти на безопасное расстояние (не менее 20 метров).
+3. **Оповещение:** Отправить экстренный отчет через CRM / Telegram-бота.`
+    },
+    {
+      id: 'art-004',
+      space_id: 'space-it-api',
+      title: 'Спецификация интеграции телеметрии и вебхуков CRM',
+      slug: 'telemetry-integration-spec',
+      excerpt: 'Архитектура сбора отчетов через вебхук Telegram-бота и протокол OCPP 2.0.1.',
+      author_id: 'usr-root-001',
+      author_name: 'Администратор системы',
+      author_role: 'superadmin',
+      parent_id: null,
+      order: 1,
+      tags: ['api', 'телеметрия', 'вебхук', 'crm'],
+      is_pinned: false,
+      views_count: 1,
+      read_time_minutes: 6,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      content: `## Архитектура вебхука CRM отчетов
+
+Telegram-бот отправляет JSON-пакеты методом \`POST\` на адрес:
+\`\`\`
+POST /api/crm/webhook
+\`\`\`
+
+---
+
+### Пример структуры входящего JSON отчета:
+
+\`\`\`json
+{
+  "telegram_user_id": "98124571",
+  "telegram_username": "@driver_ivan",
+  "employee_name": "Иван Смирнов",
+  "report_type": "shift_report",
+  "shift_date": "2026-08-30",
+  "title": "Смена закрыта без замечаний",
+  "metrics": {
+    "hours_worked": 8.5,
+    "mileage_km": 194.2,
+    "kwh_charged": 38.4,
+    "vehicle_plate": "Е777КХ 799"
+  },
+  "notes": "Все запланированные маршруты выполнены, замечаний по батарее нет.",
+  "attachments": [
+    {
+      "type": "photo",
+      "url": "https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800",
+      "caption": "Одометр и приборная панель"
+    }
+  ]
+}
+\`\`\`
+`
+    }
+  ],
+  audit_logs: [
+    {
+      id: 'log-init-001',
+      actor_id: 'usr-root-001',
+      actor_email: 'admin@electrodrivers.ru',
+      actor_telegram: '@electrodrivers_admin',
+      action: 'SYSTEM_INITIALIZATION',
+      target_id: 'system',
+      target_type: 'system',
+      details: 'Инициализация портала Electrodrivers и модулей CRM',
+      created_at: new Date().toISOString()
+    }
+  ],
+  onboarding_steps: [
+    {
+      id: 'step-1',
+      title: 'Изучение регламента допуска к смене',
+      description: 'Ознакомьтесь с правилами проверки оборудования перед выходом на линию.',
+      category: 'Регламенты',
+      article_id: 'art-001',
+      order: 1,
+      duration_minutes: 10
+    },
+    {
+      id: 'step-2',
+      title: 'Стандарты зарядных станций и протоколы',
+      description: 'Изучите типы разъемов (CCS2, GB/T, Type 2) и правила проведения сессий зарядки.',
+      category: 'Инфраструктура',
+      article_id: 'art-002',
+      order: 2,
+      duration_minutes: 15
+    },
+    {
+      id: 'step-3',
+      title: 'Инструктаж по технике безопасности',
+      description: 'Ознакомьтесь с правилами безопасности при работе с высоковольтными системами.',
+      category: 'Безопасность',
+      article_id: 'art-003',
+      order: 3,
+      duration_minutes: 15
+    },
+    {
+      id: 'step-4',
+      title: 'Отправка первого тестового отчета в Telegram-бот',
+      description: 'Отправьте статус смены в бота для проверки интеграции с CRM.',
+      category: 'Отчетность',
+      order: 4,
+      duration_minutes: 5
+    }
+  ],
+  user_progress: {},
+  reports: [
+    {
+      id: 'rep-001',
+      telegram_user_id: '12498211',
+      telegram_username: '@driver_alex',
+      employee_name: 'Алексей Воронов',
+      report_type: 'shift_report',
+      title: 'Закрытие дневной смены (Маршрут Центр)',
+      shift_date: '2026-08-30',
+      status: 'pending_review',
+      metrics: {
+        hours_worked: 8.0,
+        mileage_km: 182.5,
+        kwh_charged: 34.2,
+        vehicle_plate: 'Е777КХ 799'
+      },
+      notes: 'Смена прошла штатно. Быстрая зарядка на хабе CCS2 выполнена за 22 минуты. Батарея на конец смены: 86%.',
+      attachments: [
+        {
+          type: 'photo',
+          url: 'https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800&auto=format&fit=crop&q=80',
+          caption: 'Показания одометра и зарядного терминала'
+        }
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ]
+};
+
+let memoryDb: DatabaseSchema | null = null;
+
+function ensureDbDirectory() {
+  const dir = path.dirname(DB_FILE_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+export function getDb(): DatabaseSchema {
+  if (memoryDb) {
+    return memoryDb;
+  }
+  try {
+    ensureDbDirectory();
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const fileData = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(fileData);
+      if (!parsed.reports) parsed.reports = [];
+      memoryDb = parsed;
+    } else {
+      memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(memoryDb, null, 2), 'utf-8');
+    }
+  } catch (err) {
+    console.warn('DB Load warning:', err);
+    memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
+  }
+  return memoryDb!;
+}
+
+export function saveDb(data: DatabaseSchema): void {
+  memoryDb = data;
+  try {
+    ensureDbDirectory();
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving DB:', err);
+  }
+}
+
+// ================= USER OPERATIONS =================
+export function findUserByEmail(email: string) {
+  const db = getDb();
+  return db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+export function findUserById(id: string) {
+  const db = getDb();
+  return db.users.find(u => u.id === id);
+}
+
+export function getAllUsers() {
+  const db = getDb();
+  return db.users.map(({ password_hash, ...rest }) => rest);
+}
+
+export function createUser(userData: {
+  email: string;
+  password_hash: string;
+  telegram_nickname: string;
+  full_name?: string;
+  role?: 'user' | 'admin' | 'superadmin';
+  status?: 'pending' | 'active' | 'blocked';
+}) {
+  const db = getDb();
+  const newUser = {
+    id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    email: userData.email,
+    password_hash: userData.password_hash,
+    telegram_nickname: userData.telegram_nickname.startsWith('@') ? userData.telegram_nickname : `@${userData.telegram_nickname}`,
+    role: userData.role || 'user',
+    status: userData.status || 'pending',
+    full_name: userData.full_name || userData.telegram_nickname,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  db.users.push(newUser);
+  
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: 'system',
+    actor_email: 'system',
+    actor_telegram: '@system',
+    action: 'USER_REGISTERED',
+    target_id: newUser.id,
+    target_type: 'user',
+    details: `Регистрация: ${newUser.email} (${newUser.telegram_nickname}), статус: pending`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  const { password_hash, ...profile } = newUser;
+  return profile;
+}
+
+export function updateUserStatus(userId: string, status: 'pending' | 'active' | 'blocked', actor: UserProfile) {
+  const db = getDb();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) throw new Error('Пользователь не найден');
+
+  const oldStatus = user.status;
+  user.status = status;
+  user.updated_at = new Date().toISOString();
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'USER_STATUS_CHANGE',
+    target_id: user.id,
+    target_type: 'user',
+    details: `Статус пользователя ${user.email} изменен с ${oldStatus} на ${status}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  const { password_hash, ...profile } = user;
+  return profile;
+}
+
+export function updateUserRole(userId: string, role: 'user' | 'admin' | 'superadmin', actor: UserProfile) {
+  const db = getDb();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) throw new Error('Пользователь не найден');
+
+  const oldRole = user.role;
+  user.role = role;
+  user.updated_at = new Date().toISOString();
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'USER_ROLE_CHANGE',
+    target_id: user.id,
+    target_type: 'user',
+    details: `Роль пользователя ${user.email} изменена с ${oldRole} на ${role}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  const { password_hash, ...profile } = user;
+  return profile;
+}
+
+export function updateUserProfile(userId: string, updates: Partial<UserProfile>) {
+  const db = getDb();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) throw new Error('Пользователь не найден');
+
+  if (updates.full_name !== undefined) user.full_name = updates.full_name;
+  if (updates.telegram_nickname !== undefined) {
+    user.telegram_nickname = updates.telegram_nickname.startsWith('@') ? updates.telegram_nickname : `@${updates.telegram_nickname}`;
+  }
+  user.updated_at = new Date().toISOString();
+
+  saveDb(db);
+  const { password_hash, ...profile } = user;
+  return profile;
+}
+
+export function deleteUser(userId: string, actor: UserProfile) {
+  const db = getDb();
+  const idx = db.users.findIndex(u => u.id === userId);
+  if (idx === -1) throw new Error('Пользователь не найден');
+  const target = db.users[idx];
+
+  db.users.splice(idx, 1);
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'USER_DELETE',
+    target_id: userId,
+    target_type: 'user',
+    details: `Удален пользователь ${target.email} (${target.telegram_nickname})`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return { success: true };
+}
+
+// ================= SPACES & ARTICLES =================
+export function getAllSpaces(): Space[] {
+  const db = getDb();
+  return db.spaces.sort((a, b) => a.order - b.order);
+}
+
+export function getSpaceById(id: string): Space | undefined {
+  const db = getDb();
+  return db.spaces.find(s => s.id === id || s.slug === id);
+}
+
+export function createSpace(spaceData: Omit<Space, 'id'>, actor: UserProfile): Space {
+  const db = getDb();
+  const newSpace: Space = {
+    ...spaceData,
+    id: `space-${Date.now()}`,
+    order: db.spaces.length + 1
+  };
+  db.spaces.push(newSpace);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'SPACE_CREATE',
+    target_id: newSpace.id,
+    target_type: 'space',
+    details: `Создано пространство: "${newSpace.name}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return newSpace;
+}
+
+export function getAllArticles(): Article[] {
+  const db = getDb();
+  return db.articles;
+}
+
+export function getArticlesBySpace(spaceId: string): Article[] {
+  const db = getDb();
+  return db.articles.filter(a => a.space_id === spaceId || a.space_id === getSpaceById(spaceId)?.id);
+}
+
+export function getArticleById(id: string): Article | undefined {
+  const db = getDb();
+  return db.articles.find(a => a.id === id || a.slug === id);
+}
+
+export function createArticle(articleData: {
+  space_id: string;
+  title: string;
+  slug?: string;
+  content: string;
+  excerpt?: string;
+  tags?: string[];
+  is_pinned?: boolean;
+  parent_id?: string | null;
+}, actor: UserProfile): Article {
+  const db = getDb();
+  const slug = articleData.slug || articleData.title.toLowerCase().replace(/[^a-zа-я0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const wordCount = articleData.content.split(/\s+/).length;
+  const readTime = Math.max(1, Math.ceil(wordCount / 180));
+
+  const newArticle: Article = {
+    id: `art-${Date.now()}`,
+    space_id: articleData.space_id,
+    title: articleData.title,
+    slug: `${slug}-${Math.random().toString(36).substring(2, 6)}`,
+    content: articleData.content,
+    excerpt: articleData.excerpt || articleData.content.substring(0, 150).replace(/[#*`_]/g, '') + '...',
+    author_id: actor.id,
+    author_name: actor.full_name || actor.telegram_nickname,
+    author_role: actor.role,
+    parent_id: articleData.parent_id || null,
+    order: db.articles.length + 1,
+    tags: articleData.tags || [],
+    is_pinned: Boolean(articleData.is_pinned),
+    views_count: 0,
+    read_time_minutes: readTime,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  db.articles.push(newArticle);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'ARTICLE_CREATE',
+    target_id: newArticle.id,
+    target_type: 'article',
+    details: `Создана статья: "${newArticle.title}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return newArticle;
+}
+
+export function updateArticle(id: string, updates: Partial<Article>, actor: UserProfile): Article {
+  const db = getDb();
+  const article = db.articles.find(a => a.id === id);
+  if (!article) throw new Error('Статья не найдена');
+
+  if (updates.title !== undefined) article.title = updates.title;
+  if (updates.content !== undefined) {
+    article.content = updates.content;
+    const wordCount = updates.content.split(/\s+/).length;
+    article.read_time_minutes = Math.max(1, Math.ceil(wordCount / 180));
+  }
+  if (updates.excerpt !== undefined) article.excerpt = updates.excerpt;
+  if (updates.space_id !== undefined) article.space_id = updates.space_id;
+  if (updates.parent_id !== undefined) article.parent_id = updates.parent_id;
+  if (updates.tags !== undefined) article.tags = updates.tags;
+  if (updates.is_pinned !== undefined) article.is_pinned = updates.is_pinned;
+  article.updated_at = new Date().toISOString();
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'ARTICLE_UPDATE',
+    target_id: article.id,
+    target_type: 'article',
+    details: `Обновлена статья: "${article.title}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return article;
+}
+
+export function deleteArticle(id: string, actor: UserProfile): { success: boolean } {
+  const db = getDb();
+  const idx = db.articles.findIndex(a => a.id === id);
+  if (idx === -1) throw new Error('Статья не найдена');
+  const target = db.articles[idx];
+
+  db.articles.splice(idx, 1);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'ARTICLE_DELETE',
+    target_id: id,
+    target_type: 'article',
+    details: `Удалена статья: "${target.title}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return { success: true };
+}
+
+export function incrementArticleViews(id: string): void {
+  const db = getDb();
+  const article = db.articles.find(a => a.id === id || a.slug === id);
+  if (article) {
+    article.views_count += 1;
+    saveDb(db);
+  }
+}
+
+// ================= CRM REPORTS =================
+export function getAllReports(): EmployeeReport[] {
+  const db = getDb();
+  return (db.reports || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export function getReportById(id: string): EmployeeReport | undefined {
+  const db = getDb();
+  return (db.reports || []).find(r => r.id === id);
+}
+
+export function createReport(data: {
+  telegram_user_id?: string;
+  telegram_username: string;
+  employee_name?: string;
+  report_type?: ReportType;
+  title?: string;
+  shift_date?: string;
+  metrics?: Record<string, any>;
+  notes?: string;
+  attachments?: Array<{ type: 'photo' | 'document' | 'video'; url: string; caption?: string }>;
+  raw_payload?: Record<string, any>;
+}): EmployeeReport {
+  const db = getDb();
+  if (!db.reports) db.reports = [];
+
+  const cleanTelegram = data.telegram_username.startsWith('@') ? data.telegram_username : `@${data.telegram_username}`;
+  const today = new Date().toISOString().split('T')[0];
+
+  const newReport: EmployeeReport = {
+    id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    telegram_user_id: data.telegram_user_id || undefined,
+    telegram_username: cleanTelegram,
+    employee_name: data.employee_name || cleanTelegram,
+    report_type: data.report_type || 'shift_report',
+    title: data.title || `Отчет сотрудника ${cleanTelegram} (${today})`,
+    shift_date: data.shift_date || today,
+    status: 'pending_review',
+    metrics: data.metrics || {},
+    notes: data.notes || '',
+    attachments: data.attachments || [],
+    raw_payload: data.raw_payload || {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  db.reports.unshift(newReport);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: 'telegram_bot',
+    actor_email: 'webhook',
+    actor_telegram: cleanTelegram,
+    action: 'REPORT_SUBMITTED',
+    target_id: newReport.id,
+    target_type: 'report',
+    details: `Поступил отчет от ${cleanTelegram} (${newReport.title})`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return newReport;
+}
+
+export function updateReportStatus(
+  reportId: string, 
+  status: ReportStatus, 
+  reviewComment: string | undefined, 
+  actor: UserProfile
+): EmployeeReport {
+  const db = getDb();
+  const report = (db.reports || []).find(r => r.id === reportId);
+  if (!report) throw new Error('Отчет не найден');
+
+  const oldStatus = report.status;
+  report.status = status;
+  if (reviewComment !== undefined) report.review_comment = reviewComment;
+  report.reviewer_id = actor.id;
+  report.reviewer_name = actor.full_name || actor.telegram_nickname;
+  report.updated_at = new Date().toISOString();
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'REPORT_STATUS_CHANGE',
+    target_id: report.id,
+    target_type: 'report',
+    details: `Статус отчета ${report.id} изменен с ${oldStatus} на ${status} модератором ${actor.telegram_nickname}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return report;
+}
+
+export function deleteReport(reportId: string, actor: UserProfile): { success: boolean } {
+  const db = getDb();
+  const idx = (db.reports || []).findIndex(r => r.id === reportId);
+  if (idx === -1) throw new Error('Отчет не найден');
+
+  const target = db.reports[idx];
+  db.reports.splice(idx, 1);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'REPORT_DELETE',
+    target_id: reportId,
+    target_type: 'report',
+    details: `Удален отчет ${reportId} (${target.title})`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return { success: true };
+}
+
+// ================= AUDIT LOGS =================
+export function getAuditLogs(): AuditLog[] {
+  const db = getDb();
+  return db.audit_logs;
+}
+
+// ================= ONBOARDING =================
+export function getOnboardingSteps(): OnboardingStep[] {
+  const db = getDb();
+  return db.onboarding_steps.sort((a, b) => a.order - b.order);
+}
+
+export function getUserOnboardingProgress(userId: string): UserOnboardingProgress {
+  const db = getDb();
+  if (!db.user_progress[userId]) {
+    db.user_progress[userId] = {
+      user_id: userId,
+      completed_step_ids: [],
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    saveDb(db);
+  }
+  return db.user_progress[userId];
+}
+
+export function toggleOnboardingStep(userId: string, stepId: string): UserOnboardingProgress {
+  const db = getDb();
+  let prog = db.user_progress[userId];
+  if (!prog) {
+    prog = {
+      user_id: userId,
+      completed_step_ids: [],
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    db.user_progress[userId] = prog;
+  }
+
+  const index = prog.completed_step_ids.indexOf(stepId);
+  if (index >= 0) {
+    prog.completed_step_ids.splice(index, 1);
+  } else {
+    prog.completed_step_ids.push(stepId);
+  }
+  prog.updated_at = new Date().toISOString();
+
+  saveDb(db);
+  return prog;
+}

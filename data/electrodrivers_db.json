@@ -1,0 +1,580 @@
+{
+  "users": [
+    {
+      "id": "usr-root-001",
+      "email": "admin@electrodrivers.ru",
+      "telegram_nickname": "@electrodrivers_admin",
+      "role": "superadmin",
+      "status": "active",
+      "full_name": "Администратор системы",
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z",
+      "password_hash": "pbkdf2$10000$00fed40a6d038a262db4178522b00f4b$7d208f18ad614c90e2f66c070625f13854295a686e28b43e1eb663b9965baa977d0632d2c9309d0eb90d9f71715cd7c5bf2ff05e4a7daf6a0ec418f3a68689fc",
+      "last_login_at": "2026-08-30T10:25:41.526Z"
+    },
+    {
+      "id": "usr-1788084115349-eh6h",
+      "email": "regular@electrodrivers.ru",
+      "password_hash": "UserPassword2026",
+      "telegram_nickname": "@regular_driver",
+      "role": "user",
+      "status": "active",
+      "full_name": "@regular_driver",
+      "created_at": "2026-08-30T10:01:55.349Z",
+      "updated_at": "2026-08-30T10:01:55.382Z",
+      "last_login_at": "2026-08-30T10:01:55.398Z"
+    }
+  ],
+  "spaces": [
+    {
+      "id": "space-regulations",
+      "name": "Регламенты и стандарты",
+      "slug": "regulations",
+      "description": "Основные корпоративные правила, инструкции и регламенты работы участников.",
+      "order": 1
+    },
+    {
+      "id": "space-charging",
+      "name": "Зарядная инфраструктура",
+      "slug": "charging-infrastructure",
+      "description": "Стандарты зарядных станций (CCS2, GB/T, Type 2), правила подключения и эксплуатация.",
+      "order": 2
+    },
+    {
+      "id": "space-safety",
+      "name": "Безопасность и регламенты ЧС",
+      "slug": "safety-protocols",
+      "description": "Инструкции по технической безопасности при работе с высоковольтными системами.",
+      "order": 3
+    },
+    {
+      "id": "space-it-api",
+      "name": "IT-инфраструктура и API",
+      "slug": "it-infrastructure-api",
+      "description": "Техническая документация, протоколы телеметрии, интеграции и спецификации API.",
+      "order": 4
+    }
+  ],
+  "articles": [
+    {
+      "id": "art-001",
+      "space_id": "space-regulations",
+      "title": "Регламент допуска и подготовки к выходу на смену",
+      "slug": "operational-checklist",
+      "excerpt": "Обязательный порядок проверки состояния оборудования, батареи и документов перед началом работы.",
+      "author_id": "usr-root-001",
+      "author_name": "Администратор системы",
+      "author_role": "superadmin",
+      "parent_id": null,
+      "order": 1,
+      "tags": [
+        "регламент",
+        "инструкция",
+        "онбординг"
+      ],
+      "is_pinned": true,
+      "views_count": 1,
+      "read_time_minutes": 4,
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z",
+      "content": "## 1. Общие положения\n\nНастоящий регламент определяет порядок подготовки и проверки оборудования участниками системы **Electrodrivers**.\n\n---\n\n### 2. Обязательный чек-лист перед началом работы:\n\n- [x] Проверка авторизации в корпоративном портале\n- [x] Контроль уровня заряда батареи (не менее 80% перед выходом на линию)\n- [x] Визуальный осмотр кабелей и коннекторов\n- [ ] Фиксация показаний одометра\n\n> ⚠️ **Важно:** При обнаружении любых повреждений кабелей или изоляции немедленно сообщите в диспетчерскую службу через [Telegram-бота](https://t.me/ElectrodriversBot).\n\n---\n\n### 3. Фото и видео фиксация\n\nПри передаче смены обязательно прикрепите фотоотчет показаний приборов:\n\n![Приборная панель и заряд](https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800&auto=format&fit=crop&q=80)"
+    },
+    {
+      "id": "art-002",
+      "space_id": "space-charging",
+      "title": "Стандарты зарядных станций и протоколы подключения",
+      "slug": "charging-standards-overview",
+      "excerpt": "Спецификация стандартов быстрой и медленной зарядки, требования безопасности и регламенты хабов.",
+      "author_id": "usr-root-001",
+      "author_name": "Администратор системы",
+      "author_role": "superadmin",
+      "parent_id": null,
+      "order": 1,
+      "tags": [
+        "зарядка",
+        "стандарты",
+        "GB/T",
+        "CCS2"
+      ],
+      "is_pinned": true,
+      "views_count": 1,
+      "read_time_minutes": 5,
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z",
+      "content": "## Зарядные протоколы и стандарты\n\nВ инфраструктуре Electrodrivers применяются стандарты быстрой (DC) и переменной (AC) зарядки.\n\n---\n\n### Спецификация разъемов:\n\n| Стандарт | Тип тока | Максимальная мощность | Применение |\n| :--- | :--- | :--- | :--- |\n| **CCS Combo 2** | Постоянный (DC) | до 360 кВт | Скоростные магистральные хабы |\n| **GB/T DC** | Постоянный (DC) | до 250 кВт | Городские ультрабыстрые станции |\n| **Type 2 (Mennekes)** | Переменный (AC) | до 22 кВт | Ночная парковочная зарядка |\n\n---\n\n### Видеоинструкция по подключению:\n\n[Смотреть обучающее видео по высоковольтным коннекторам](https://electrodrivers.ru/video/charging-guide.mp4)"
+    },
+    {
+      "id": "art-003",
+      "space_id": "space-safety",
+      "title": "Инструкция по безопасности при работе с высоковольтными системами",
+      "slug": "high-voltage-safety",
+      "excerpt": "Правила техники безопасности, действия в нештатных ситуациях и регламент оповещения.",
+      "author_id": "usr-root-001",
+      "author_name": "Администратор системы",
+      "author_role": "superadmin",
+      "parent_id": null,
+      "order": 1,
+      "tags": [
+        "безопасность",
+        "высокое напряжение",
+        "регламент"
+      ],
+      "is_pinned": true,
+      "views_count": 1,
+      "read_time_minutes": 4,
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z",
+      "content": "## Техническая безопасность\n\nТяговые батареи и силовая проводка находятся под постоянным напряжением от 400V до 800V DC.\n\n---\n\n### Действия при возникновении неисправности:\n\n1. **Немедленно обесточить систему:** Выключить зажигание и активировать сервисный размыкатель.\n2. **Оценить обстановку:** Отойти на безопасное расстояние (не менее 20 метров).\n3. **Оповещение:** Отправить экстренный отчет через CRM / Telegram-бота."
+    },
+    {
+      "id": "art-004",
+      "space_id": "space-it-api",
+      "title": "Спецификация интеграции телеметрии и вебхуков CRM",
+      "slug": "telemetry-integration-spec",
+      "excerpt": "Архитектура сбора отчетов через вебхук Telegram-бота и протокол OCPP 2.0.1.",
+      "author_id": "usr-root-001",
+      "author_name": "Администратор системы",
+      "author_role": "superadmin",
+      "parent_id": null,
+      "order": 1,
+      "tags": [
+        "api",
+        "телеметрия",
+        "вебхук",
+        "crm"
+      ],
+      "is_pinned": false,
+      "views_count": 1,
+      "read_time_minutes": 6,
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z",
+      "content": "## Архитектура вебхука CRM отчетов\n\nTelegram-бот отправляет JSON-пакеты методом `POST` на адрес:\n```\nPOST /api/crm/webhook\n```\n\n---\n\n### Пример структуры входящего JSON отчета:\n\n```json\n{\n  \"telegram_user_id\": \"98124571\",\n  \"telegram_username\": \"@driver_ivan\",\n  \"employee_name\": \"Иван Смирнов\",\n  \"report_type\": \"shift_report\",\n  \"shift_date\": \"2026-08-30\",\n  \"title\": \"Смена закрыта без замечаний\",\n  \"metrics\": {\n    \"hours_worked\": 8.5,\n    \"mileage_km\": 194.2,\n    \"kwh_charged\": 38.4,\n    \"vehicle_plate\": \"Е777КХ 799\"\n  },\n  \"notes\": \"Все запланированные маршруты выполнены, замечаний по батарее нет.\",\n  \"attachments\": [\n    {\n      \"type\": \"photo\",\n      \"url\": \"https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800\",\n      \"caption\": \"Одометр и приборная панель\"\n    }\n  ]\n}\n```\n"
+    },
+    {
+      "id": "art-1788084915850",
+      "space_id": "space-regulations",
+      "title": "Инструкция по работе с CRM отчетов Telegram",
+      "slug": "инструкция-по-работе-с-crm-отчетов-telegram-gm3c",
+      "content": "### Регламент отправки отчетов\n\n1. Бот отправляет JSON на `/api/crm/webhook`\n2. Администраторы модерируют в CRM\n\n> Важно: проверяйте показания телеметрии!",
+      "excerpt": " Регламент отправки отчетов\n\n1. Бот отправляет JSON на /api/crm/webhook\n2. Администраторы модерируют в CRM\n\n> Важно: проверяйте показания телемет...",
+      "author_id": "usr-root-001",
+      "author_name": "Администратор системы",
+      "author_role": "superadmin",
+      "parent_id": null,
+      "order": 5,
+      "tags": [
+        "crm",
+        "инструкция",
+        "telegram"
+      ],
+      "is_pinned": true,
+      "views_count": 0,
+      "read_time_minutes": 1,
+      "created_at": "2026-08-30T10:15:15.850Z",
+      "updated_at": "2026-08-30T10:15:15.850Z"
+    }
+  ],
+  "audit_logs": [
+    {
+      "id": "log-1788084961866",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "REPORT_STATUS_CHANGE",
+      "target_id": "rep-1788084961843-6zo2",
+      "target_type": "report",
+      "details": "Статус отчета rep-1788084961843-6zo2 изменен с pending_review на approved модератором @electrodrivers_admin",
+      "created_at": "2026-08-30T10:16:01.866Z"
+    },
+    {
+      "id": "log-1788084961843",
+      "actor_id": "telegram_bot",
+      "actor_email": "webhook",
+      "actor_telegram": "@ev_mechanic_oleg",
+      "action": "REPORT_SUBMITTED",
+      "target_id": "rep-1788084961843-6zo2",
+      "target_type": "report",
+      "details": "Поступил отчет от @ev_mechanic_oleg (Плановое ТО зарядной станции Hub-4)",
+      "created_at": "2026-08-30T10:16:01.843Z"
+    },
+    {
+      "id": "log-1788084915850",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "ARTICLE_CREATE",
+      "target_id": "art-1788084915850",
+      "target_type": "article",
+      "details": "Создана статья: \"Инструкция по работе с CRM отчетов Telegram\"",
+      "created_at": "2026-08-30T10:15:15.850Z"
+    },
+    {
+      "id": "log-1788084915835",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "REPORT_STATUS_CHANGE",
+      "target_id": "rep-1788084915818-rcf7",
+      "target_type": "report",
+      "details": "Статус отчета rep-1788084915818-rcf7 изменен с pending_review на approved модератором @electrodrivers_admin",
+      "created_at": "2026-08-30T10:15:15.835Z"
+    },
+    {
+      "id": "log-1788084915818",
+      "actor_id": "telegram_bot",
+      "actor_email": "webhook",
+      "actor_telegram": "@unknown",
+      "action": "REPORT_SUBMITTED",
+      "target_id": "rep-1788084915818-rcf7",
+      "target_type": "report",
+      "details": "Поступил отчет от @unknown (Отчет @unknown от 2026-08-30)",
+      "created_at": "2026-08-30T10:15:15.818Z"
+    },
+    {
+      "id": "log-1788084906340",
+      "actor_id": "telegram_bot",
+      "actor_email": "webhook",
+      "actor_telegram": "@unknown",
+      "action": "REPORT_SUBMITTED",
+      "target_id": "rep-1788084906340-gj19",
+      "target_type": "report",
+      "details": "Поступил отчет от @unknown (Отчет @unknown от 2026-08-30)",
+      "created_at": "2026-08-30T10:15:06.340Z"
+    },
+    {
+      "id": "log-1788084816769",
+      "actor_id": "telegram_bot",
+      "actor_email": "webhook",
+      "actor_telegram": "@unknown",
+      "action": "REPORT_SUBMITTED",
+      "target_id": "rep-1788084816769-hnnz",
+      "target_type": "report",
+      "details": "Поступил отчет от @unknown (Отчет @unknown от 2026-08-30)",
+      "created_at": "2026-08-30T10:13:36.769Z"
+    },
+    {
+      "id": "log-1788084115382",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "USER_STATUS_CHANGE",
+      "target_id": "usr-1788084115349-eh6h",
+      "target_type": "user",
+      "details": "Статус пользователя regular@electrodrivers.ru изменен с pending на active",
+      "created_at": "2026-08-30T10:01:55.382Z"
+    },
+    {
+      "id": "log-1788084115349",
+      "actor_id": "system",
+      "actor_email": "system",
+      "actor_telegram": "@system",
+      "action": "USER_REGISTERED",
+      "target_id": "usr-1788084115349-eh6h",
+      "target_type": "user",
+      "details": "Регистрация: regular@electrodrivers.ru (@regular_driver), статус: pending",
+      "created_at": "2026-08-30T10:01:55.349Z"
+    },
+    {
+      "id": "log-1788084110044",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "REPORT_STATUS_CHANGE",
+      "target_id": "rep-1788084110009-lbub",
+      "target_type": "report",
+      "details": "Статус отчета rep-1788084110009-lbub изменен с pending_review на approved модератором @electrodrivers_admin",
+      "created_at": "2026-08-30T10:01:50.044Z"
+    },
+    {
+      "id": "log-1788084110009",
+      "actor_id": "telegram_bot",
+      "actor_email": "webhook",
+      "actor_telegram": "@driver_mikhail",
+      "action": "REPORT_SUBMITTED",
+      "target_id": "rep-1788084110009-lbub",
+      "target_type": "report",
+      "details": "Поступил отчет от @driver_mikhail (Отчет по вечерней смене)",
+      "created_at": "2026-08-30T10:01:50.009Z"
+    },
+    {
+      "id": "log-init-001",
+      "actor_id": "usr-root-001",
+      "actor_email": "admin@electrodrivers.ru",
+      "actor_telegram": "@electrodrivers_admin",
+      "action": "SYSTEM_INITIALIZATION",
+      "target_id": "system",
+      "target_type": "system",
+      "details": "Инициализация портала Electrodrivers и модулей CRM",
+      "created_at": "2026-08-30T10:01:49.951Z"
+    }
+  ],
+  "onboarding_steps": [
+    {
+      "id": "step-1",
+      "title": "Изучение регламента допуска к смене",
+      "description": "Ознакомьтесь с правилами проверки оборудования перед выходом на линию.",
+      "category": "Регламенты",
+      "article_id": "art-001",
+      "order": 1,
+      "duration_minutes": 10
+    },
+    {
+      "id": "step-2",
+      "title": "Стандарты зарядных станций и протоколы",
+      "description": "Изучите типы разъемов (CCS2, GB/T, Type 2) и правила проведения сессий зарядки.",
+      "category": "Инфраструктура",
+      "article_id": "art-002",
+      "order": 2,
+      "duration_minutes": 15
+    },
+    {
+      "id": "step-3",
+      "title": "Инструктаж по технике безопасности",
+      "description": "Ознакомьтесь с правилами безопасности при работе с высоковольтными системами.",
+      "category": "Безопасность",
+      "article_id": "art-003",
+      "order": 3,
+      "duration_minutes": 15
+    },
+    {
+      "id": "step-4",
+      "title": "Отправка первого тестового отчета в Telegram-бот",
+      "description": "Отправьте статус смены в бота для проверки интеграции с CRM.",
+      "category": "Отчетность",
+      "order": 4,
+      "duration_minutes": 5
+    }
+  ],
+  "user_progress": {},
+  "reports": [
+    {
+      "id": "rep-1788084961843-6zo2",
+      "telegram_user_id": "883719",
+      "telegram_username": "@ev_mechanic_oleg",
+      "employee_name": "Олег Ремонтов",
+      "report_type": "maintenance",
+      "title": "Плановое ТО зарядной станции Hub-4",
+      "shift_date": "2026-08-30",
+      "status": "approved",
+      "metrics": {
+        "connectors_tested": 4,
+        "firmware_version": "v3.14.2",
+        "power_output_kw": 150
+      },
+      "notes": "Проверена изоляция кабелей GB/T и CCS2. Заменен вентилятор охлаждения силового модуля.",
+      "attachments": [],
+      "raw_payload": {
+        "bot_id": "tg_field_ops_bot",
+        "telegram_user": {
+          "id": 883719,
+          "username": "ev_mechanic_oleg",
+          "first_name": "Олег",
+          "last_name": "Ремонтов"
+        },
+        "report": {
+          "type": "maintenance",
+          "title": "Плановое ТО зарядной станции Hub-4",
+          "shift_date": "2026-08-30",
+          "location": "Зарядный хаб Восток, ул. Ленина 42",
+          "metrics": {
+            "connectors_tested": 4,
+            "firmware_version": "v3.14.2",
+            "power_output_kw": 150
+          },
+          "notes": "Проверена изоляция кабелей GB/T и CCS2. Заменен вентилятор охлаждения силового модуля."
+        }
+      },
+      "created_at": "2026-08-30T10:16:01.843Z",
+      "updated_at": "2026-08-30T10:16:01.866Z",
+      "review_comment": "Принято главным инженером, все замеры в норме.",
+      "reviewer_id": "usr-root-001",
+      "reviewer_name": "Администратор системы"
+    },
+    {
+      "id": "rep-1788084915818-rcf7",
+      "telegram_username": "@unknown",
+      "employee_name": "@unknown",
+      "report_type": "shift_report",
+      "title": "Отчет @unknown от 2026-08-30",
+      "shift_date": "2026-08-30",
+      "status": "approved",
+      "metrics": {},
+      "notes": "",
+      "attachments": [],
+      "raw_payload": {
+        "bot_id": "tg_field_ops_bot",
+        "telegram_user": {
+          "id": 883719,
+          "username": "ev_mechanic_oleg",
+          "first_name": "Олег",
+          "last_name": "Ремонтов"
+        },
+        "report": {
+          "type": "maintenance",
+          "title": "Плановое ТО зарядной станции Hub-4",
+          "shift_date": "2026-08-30",
+          "location": "Зарядный хаб Восток, ул. Ленина 42",
+          "metrics": {
+            "connectors_tested": 4,
+            "firmware_version": "v3.14.2",
+            "power_output_kw": 150
+          },
+          "notes": "Проверена изоляция кабелей GB/T и CCS2. Заменен вентилятор охлаждения силового модуля."
+        }
+      },
+      "created_at": "2026-08-30T10:15:15.818Z",
+      "updated_at": "2026-08-30T10:15:15.835Z",
+      "review_comment": "Принято главным инженером, все замеры в норме.",
+      "reviewer_id": "usr-root-001",
+      "reviewer_name": "Администратор системы"
+    },
+    {
+      "id": "rep-1788084906340-gj19",
+      "telegram_username": "@unknown",
+      "employee_name": "@unknown",
+      "report_type": "shift_report",
+      "title": "Отчет @unknown от 2026-08-30",
+      "shift_date": "2026-08-30",
+      "status": "pending_review",
+      "metrics": {},
+      "notes": "",
+      "attachments": [],
+      "raw_payload": {
+        "bot_id": "tg_field_ops_bot",
+        "telegram_user": {
+          "id": 883719,
+          "username": "ev_mechanic_oleg",
+          "first_name": "Олег",
+          "last_name": "Ремонтов"
+        },
+        "report": {
+          "type": "maintenance",
+          "title": "Плановое ТО зарядной станции Hub-4",
+          "shift_date": "2026-08-30",
+          "location": "Зарядный хаб Восток, ул. Ленина 42",
+          "metrics": {
+            "connectors_tested": 4,
+            "firmware_version": "v3.14.2",
+            "power_output_kw": 150
+          },
+          "notes": "Проверена изоляция кабелей GB/T и CCS2. Заменен вентилятор охлаждения силового модуля.",
+          "attachments": [
+            {
+              "type": "photo",
+              "url": "/mock/photo1.jpg",
+              "caption": "Силовой шкаф после ТО"
+            }
+          ]
+        }
+      },
+      "created_at": "2026-08-30T10:15:06.340Z",
+      "updated_at": "2026-08-30T10:15:06.340Z"
+    },
+    {
+      "id": "rep-1788084816769-hnnz",
+      "telegram_username": "@unknown",
+      "employee_name": "@unknown",
+      "report_type": "shift_report",
+      "title": "Отчет @unknown от 2026-08-30",
+      "shift_date": "2026-08-30",
+      "status": "pending_review",
+      "metrics": {},
+      "notes": "",
+      "attachments": [],
+      "raw_payload": {
+        "bot_id": "tg_field_ops_bot",
+        "telegram_user": {
+          "id": 999888,
+          "username": "test_agent",
+          "first_name": "Алексей",
+          "last_name": "Тестов"
+        },
+        "report": {
+          "type": "daily_shift",
+          "title": "Смена завершена штатно",
+          "location": "Хаб Север",
+          "shift_hours": 8,
+          "metrics": {
+            "inspections_count": 14,
+            "incidents_resolved": 2,
+            "parts_replaced": 1
+          },
+          "notes": "Замечаний по оборудованию нет"
+        }
+      },
+      "created_at": "2026-08-30T10:13:36.769Z",
+      "updated_at": "2026-08-30T10:13:36.769Z"
+    },
+    {
+      "id": "rep-1788084110009-lbub",
+      "telegram_user_id": "9918231",
+      "telegram_username": "@driver_mikhail",
+      "employee_name": "Михаил Кузнецов",
+      "report_type": "shift_report",
+      "title": "Отчет по вечерней смене",
+      "shift_date": "2026-08-30",
+      "status": "approved",
+      "metrics": {
+        "hours_worked": 7.5,
+        "mileage_km": 165,
+        "kwh_charged": 31.5,
+        "vehicle_plate": "В333ВВ 799"
+      },
+      "notes": "Смена закрыта. Замечаний по работе станции и батареи нет.",
+      "attachments": [
+        {
+          "type": "photo",
+          "url": "https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800",
+          "caption": "Фото к отчету"
+        }
+      ],
+      "raw_payload": {
+        "telegram_user_id": "9918231",
+        "telegram_username": "@driver_mikhail",
+        "employee_name": "Михаил Кузнецов",
+        "report_type": "shift_report",
+        "shift_date": "2026-08-30",
+        "title": "Отчет по вечерней смене",
+        "metrics": {
+          "hours_worked": 7.5,
+          "mileage_km": 165,
+          "kwh_charged": 31.5,
+          "vehicle_plate": "В333ВВ 799"
+        },
+        "notes": "Смена закрыта. Замечаний по работе станции и батареи нет.",
+        "photo_url": "https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800"
+      },
+      "created_at": "2026-08-30T10:01:50.009Z",
+      "updated_at": "2026-08-30T10:01:50.044Z",
+      "review_comment": "Отчет принят без замечаний",
+      "reviewer_id": "usr-root-001",
+      "reviewer_name": "Администратор системы"
+    },
+    {
+      "id": "rep-001",
+      "telegram_user_id": "12498211",
+      "telegram_username": "@driver_alex",
+      "employee_name": "Алексей Воронов",
+      "report_type": "shift_report",
+      "title": "Закрытие дневной смены (Маршрут Центр)",
+      "shift_date": "2026-08-30",
+      "status": "pending_review",
+      "metrics": {
+        "hours_worked": 8,
+        "mileage_km": 182.5,
+        "kwh_charged": 34.2,
+        "vehicle_plate": "Е777КХ 799"
+      },
+      "notes": "Смена прошла штатно. Быстрая зарядка на хабе CCS2 выполнена за 22 минуты. Батарея на конец смены: 86%.",
+      "attachments": [
+        {
+          "type": "photo",
+          "url": "https://images.unsplash.com/photo-1558441719-8b489c63f79b?w=800&auto=format&fit=crop&q=80",
+          "caption": "Показания одометра и зарядного терминала"
+        }
+      ],
+      "created_at": "2026-08-30T10:01:49.951Z",
+      "updated_at": "2026-08-30T10:01:49.951Z"
+    }
+  ]
+}
