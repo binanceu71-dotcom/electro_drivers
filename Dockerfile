@@ -31,15 +31,19 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Ensure app directories and permissions
+# Ensure app directories exist with proper permissions
 RUN mkdir -p /app/public /app/data /app/.next/static && \
     chown -R nextjs:nodejs /app
 
-# Copy built assets with appropriate permissions
+# 1. Copy standalone bundle FIRST
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+
+# 2. Copy static files into standalone's .next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# 3. Copy public and data directories
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 USER nextjs
 

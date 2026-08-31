@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className="dark">
-      <body className="min-h-screen bg-[#040714] text-slate-100 dark:bg-[#040714] dark:text-slate-100 transition-colors duration-300">
+      <body className="min-h-screen bg-black text-neutral-100 antialiased transition-colors duration-200">
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>

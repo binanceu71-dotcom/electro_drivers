@@ -11,11 +11,10 @@
 4. [Настройка DNS и домена](#4-настройка-dns-и-домена)
 5. [Миграция базы данных в PostgreSQL](#5-миграция-базы-данных-в-postgresql)
 6. [Деплой через Docker Compose (Рекомендуемый способ)](#6-деплой-через-docker-compose)
-7. [Альтернативный деплой (Node.js + PM2 + System PostgreSQL)](#7-альтернативный-деплой-pm2)
-8. [Выпуск и автопродление SSL-сертификатов Let's Encrypt](#8-выпуск-и-автопродление-ssl-сертификатов)
-9. [Подключение и защита Telegram Bot Webhook](#9-подключение-и-защита-telegram-bot-webhook)
-10. [Автоматическое резервное копирование (Backups & Disaster Recovery)](#10-резервное-копирование)
-11. [Мониторинг, логирование и чеклист перед запуском](#11-чеклист-перед-запуском)
+7. [Выпуск SSL-сертификатов Let's Encrypt (1 команда)](#7-выпуск-ssl-сертификатов)
+8. [Подключение и защита Telegram Bot Webhook](#8-подключение-и-защита-telegram-bot-webhook)
+9. [Автоматическое резервное копирование (Backups & Disaster Recovery)](#9-резервное-копирование)
+10. [Мониторинг, логирование и чеклист перед запуском](#10-чеклист-перед-запуском)
 
 ---
 
@@ -39,7 +38,7 @@
 
 ```
                    [ Клиент / Telegram Bot ]
-                              │ (HTTPS :443)
+                              │ (HTTPS :443 / HTTP :80)
                               ▼
                      [ Nginx Reverse Proxy ]
                      - SSL Termination (Let's Encrypt)
@@ -49,13 +48,14 @@
                ┌──────────────┴──────────────┐
                ▼                             ▼
        [ Next.js 14 App ]          [ Static Cache / Assets ]
-     - Node.js 20 (Alpine)
+     - Node.js 20 (Alpine Standalone)
      - HMAC Auth & RBAC
      - API Webhooks & CRM
                │
                ▼
      [ PostgreSQL 16 DB ]
      - Persistent Docker Volume
+     - Auto-init via 01-init.sql
      - Daily automated pg_dump
 ```
 
@@ -69,20 +69,13 @@
 - SSD: 20–40 ГБ
 - ОС: Ubuntu 22.04 LTS или Ubuntu 24.04 LTS
 
-### Шаг 3.1. Базовая настройка безопасности сервера
-Подключитесь по SSH:
-```bash
-ssh root@YOUR_SERVER_IP
-```
-
-Обновите систему и создайте непривилегированного пользователя:
+### Шаг 3.1. Установка Docker и настройка файрвола
 ```bash
 apt update && apt upgrade -y
-apt install -y curl git ufw fail2ban htop unzip
+apt install -y curl git ufw fail2ban openssl
 
-# Создание пользователя deploy
-adduser deploy
-usermod -aG sudo deploy
+# Установка официального Docker
+curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
 
 # Настройка файрвола UFW
 ufw allow OpenSSH
@@ -91,227 +84,97 @@ ufw allow 443/tcp
 ufw --force enable
 ```
 
-### Шаг 3.2. Установка Docker и Docker Compose
-```bash
-# Установка официального Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-usermod -aG docker deploy
-
-# Проверка
-docker --version
-docker compose version
-```
-
 ---
 
 ## 4. Настройка DNS и домена
 
-В панели управления вашего регистратора домена (или Cloudflare) создайте A-записи:
+В панели управления вашего регистратора домена создайте A-записи:
 
 | Тип | Имя хоста | Значение | TTL |
 | :--- | :--- | :--- | :--- |
-| `A` | `portal` (или `@`) | `YOUR_SERVER_IP` | 300 сек (Auto) |
-| `A` | `www` | `YOUR_SERVER_IP` | 300 сек (Auto) |
-
-> 💡 **Проверка делегирования DNS:**
-> ```bash
-> ping portal.electrodrivers.ru
-> dig +short portal.electrodrivers.ru
-> ```
+| `A` | `portal` (или `@`) | `IP_СЕРВЕРА` | 300 сек (Auto) |
+| `A` | `www` | `IP_СЕРВЕРА` | 300 сек (Auto) |
 
 ---
 
-## 5. Миграция базы данных в PostgreSQL
+## 5. Запуск портала через Docker Compose
 
-В репозиторий уже включены:
-- `data/schema.sql` — схема таблиц, индексов и связей.
-- `data/init-db.sql` — полный дамп текущей базы с готовыми учетными записями, статьями Базы знаний, шагами онбординга и журналами аудита.
-- `scripts/export-seed-sql.ts` — генератор SQL-дампа из актуального JSON.
-
-### Структура таблиц в PostgreSQL:
-1. `users` (id, email, password_hash, telegram_nickname, role, status, ...)
-2. `spaces` (id, name, slug, description, order)
-3. `articles` (id, space_id, title, slug, content, tags, is_pinned, ...)
-4. `reports` (id, telegram_user_id, telegram_username, employee_name, report_type, metrics JSONB, attachments JSONB, raw_payload JSONB, status, ...)
-5. `audit_logs` (id, actor_id, actor_email, action, target_id, details, ...)
-6. `onboarding_steps` & `user_onboarding_progress`
-
----
-
-## 6. Деплой через Docker Compose (Рекомендуемый способ)
-
-### Шаг 6.1. Клонирование репозитория на сервер
-Перейдите под пользователя `deploy`:
+### Шаг 5.1. Клонирование и настройка `.env`
 ```bash
-su - deploy
-git clone https://github.com/your-org/electrodrivers-portal.git /home/deploy/portal
-cd /home/deploy/portal
-```
-
-### Шаг 6.2. Создание боевого `.env` файла
-```bash
+cd /root/opt/electro_drivers
 cp .env.example .env
 nano .env
 ```
 
-Сгенерируйте надежные секретные ключи:
+Сгенерируйте боевые ключи:
 ```bash
-# Генерация SESSION_SECRET
-openssl rand -base64 48
-
-# Генерация пароля для PostgreSQL
-openssl rand -base64 24
-
-# Генерация TELEGRAM_WEBHOOK_SECRET
-openssl rand -hex 32
+openssl rand -base64 48   # для SESSION_SECRET
+openssl rand -base64 24   # для POSTGRES_PASSWORD
+openssl rand -hex 32      # для TELEGRAM_WEBHOOK_SECRET
 ```
 
-Заполните `.env`:
-```env
-NODE_ENV=production
-PORT=3000
-NEXT_PUBLIC_APP_URL=https://portal.electrodrivers.ru
-
-SESSION_SECRET=YOUR_GENERATED_SESSION_SECRET
-POSTGRES_DB=electrodrivers_db
-POSTGRES_USER=electro_admin
-POSTGRES_PASSWORD=YOUR_STRONG_POSTGRES_PASSWORD
-DATABASE_URL=postgresql://electro_admin:YOUR_STRONG_POSTGRES_PASSWORD@postgres:5432/electrodrivers_db
-
-TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ
-TELEGRAM_WEBHOOK_SECRET=YOUR_GENERATED_WEBHOOK_SECRET
-```
-
-### Шаг 6.3. Первичный выпуск SSL через Certbot
-Для первичного получения сертификата запустите временный контейнер Certbot:
+### Шаг 5.2. Запуск базы данных и приложения
 ```bash
-# Создание директорий
-mkdir -p certbot_etc certbot_var nginx/conf.d
-
-# Первичный запуск Nginx и запрос сертификата
-docker compose run --rm --entrypoint "\
-  certbot certonly --webroot -w /var/www/certbot \
-  -d portal.electrodrivers.ru \
-  --email admin@electrodrivers.ru \
-  --agree-tos --no-eff-email" certbot
-```
-
-### Шаг 6.4. Запуск всех сервисов в фоне
-```bash
-docker compose up -d --build
-```
-
-Проверьте статус контейнеров:
-```bash
-docker compose ps
-docker compose logs -f app
-```
-
-Все 4 сервиса (`electrodrivers_postgres`, `electrodrivers_app`, `electrodrivers_nginx`, `electrodrivers_certbot`) будут запущены и работать с автоперезапуском при сбоях.
-
----
-
-## 7. Альтернативный деплой (PM2 + System PostgreSQL)
-
-Если вы деплоите без Docker:
-
-1. **Установка Node.js 20 & PM2 & PostgreSQL:**
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs postgresql postgresql-contrib nginx
-sudo npm install -g pm2
-```
-
-2. **Инициализация PostgreSQL:**
-```bash
-sudo -u postgres psql -c "CREATE USER electro_admin WITH PASSWORD 'StrongPassword2026!';"
-sudo -u postgres psql -c "CREATE DATABASE electrodrivers_db OWNER electro_admin;"
-sudo -u postgres psql -d electrodrivers_db -f data/init-db.sql
-```
-
-3. **Сборка и запуск Next.js через PM2:**
-```bash
-npm ci
-npm run build
-pm2 start npm --name "electrodrivers-portal" -- start -- -p 3000
-pm2 save
-pm2 startup
-```
-
-4. **Настройка Nginx хоста:**
-Скопируйте `nginx/default.conf` в `/etc/nginx/sites-available/electrodrivers` и активируйте:
-```bash
-sudo ln -s /etc/nginx/sites-available/electrodrivers /etc/nginx/sites-enabled/
-sudo certbot --nginx -d portal.electrodrivers.ru
-sudo systemctl restart nginx
+docker compose up -d postgres app
 ```
 
 ---
 
-## 8. Выпуск и автопродление SSL-сертификатов
+## 6. Выпуск SSL-сертификатов Let's Encrypt (1 команда)
 
-В `docker-compose.yml` встроен сервис `certbot`, который каждые 12 часов проверяет и автоматически продлевает сертификаты без остановки портала.
+В проект включен скрипт автоматического выпуска SSL, который создает временный bootstrap-сертификат для старта Nginx, запрашивает реальный сертификат у Let's Encrypt и перезагружает Nginx:
 
-Для ручной проверки продления:
 ```bash
-docker compose run --rm certbot renew --dry-run
+./scripts/init-ssl.sh portal.electrodrivers.ru admin@electrodrivers.ru
+```
+*(Замените `portal.electrodrivers.ru` на ваш реальный домен, а `admin@electrodrivers.ru` на ваш email).*
+
+### Запуск всего стека:
+```bash
+docker compose up -d
 ```
 
 ---
 
-## 9. Подключение и защита Telegram Bot Webhook
+## 7. Вариант запуска без SSL (по HTTP / IP адресу)
 
-Чтобы Telegram-бот отправлял структурированные отчеты сотрудников в CRM:
-
-### Шаг 9.1. Установка Webhook с Secret Token
-Выполните запрос к Telegram Bot API:
+Если ваш домен ещё не привязался по DNS, вы можете временно запустить Nginx в чистом HTTP-режиме:
 ```bash
-curl -X POST "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/setWebhook" \
+cp nginx/default-http-only.conf nginx/default.conf
+docker compose restart nginx
+```
+Портал сразу же станет доступен по `http://IP_СЕРВЕРА/` или `http://ВАШ_ДОМЕН/`.
+
+---
+
+## 8. Подключение Telegram Bot Webhook
+
+Выполните один запрос к Telegram Bot API для привязки вебхука с секретным токеном:
+```bash
+curl -X POST "https://api.telegram.org/bot<ВАШ_TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://portal.electrodrivers.ru/api/crm/webhook",
-    "secret_token": "YOUR_GENERATED_WEBHOOK_SECRET",
+    "secret_token": "ВАШ_TELEGRAM_WEBHOOK_SECRET",
     "allowed_updates": ["message", "callback_query"]
   }'
 ```
 
-Ответ Telegram должен быть:
-```json
-{"ok": true, "result": true, "description": "Webhook was set"}
-```
-
-### Шаг 9.2. Проверка статуса Webhook:
-```bash
-curl "https://api.telegram.org/bot<YOUR_TELEGRAM_BOT_TOKEN>/getWebhookInfo"
-```
-
 ---
 
-## 10. Автоматическое резервное копирование
+## 9. Автоматическое резервное копирование
 
 Скрипт `scripts/backup-db.sh` производит создание сжатых дампов `pg_dump` с автоматической ротацией (хранение 14 дней).
 
-### Настройка ежедневного резервного копирования в 03:00 ночи:
+### Настройка ночных бэкапов в 03:00:
 ```bash
-chmod +x /home/deploy/portal/scripts/backup-db.sh
-crontab -e
-```
-
-Добавьте строку:
-```cron
-0 3 * * * /home/deploy/portal/scripts/backup-db.sh >> /var/log/electrodrivers_backup.log 2>&1
-```
-
-### Восстановление из бэкапа (Disaster Recovery):
-```bash
-gunzip < /var/backups/electrodrivers/db_backup_YYYYMMDD_HHMMSS.sql.gz | \
-  docker exec -i electrodrivers_postgres psql -U electro_admin electrodrivers_db
+chmod +x /root/opt/electro_drivers/scripts/backup-db.sh
+(crontab -l 2>/dev/null; echo "0 3 * * * /root/opt/electro_drivers/scripts/backup-db.sh >> /var/log/electrodrivers_backup.log 2>&1") | crontab -
 ```
 
 ---
 
-## 11. Чеклист перед публичным запуском
+## 10. Чеклист перед публичным запуском
 
 - [ ] В `.env` заменен дефолтный `SESSION_SECRET` на случайную строку не менее 64 символов.
 - [ ] Задан надежный пароль пользователя `POSTGRES_PASSWORD`.
@@ -323,5 +186,3 @@ gunzip < /var/backups/electrodrivers/db_backup_YYYYMMDD_HHMMSS.sql.gz | \
 - [ ] Протестировано создание и модерация отчетов в CRM (`/app/reports`).
 - [ ] Включен cron для ежедневных бэкапов базы данных.
 - [ ] UFW файрвол активен (открыты только порты 22, 80, 443).
-
-🎉 **Портал Electrodrivers полностью готов к эксплуатации под высокими нагрузками!**
