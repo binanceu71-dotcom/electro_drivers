@@ -20,6 +20,14 @@ interface ToastContextType {
   info: (title: string, message?: string) => void;
 }
 
+const defaultToastContext: ToastContextType = {
+  toast: () => {},
+  success: () => {},
+  error: () => {},
+  warning: () => {},
+  info: () => {},
+};
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -77,10 +85,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast() {
+export function useToast(): ToastContextType {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    return defaultToastContext;
   }
   return context;
 }

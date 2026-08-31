@@ -10,12 +10,19 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
+const defaultThemeContext: ThemeContextType = {
+  theme: 'dark',
+  toggleTheme: () => {},
+  setTheme: () => {}
+};
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
 
   const applyTheme = (t: Theme) => {
+    if (typeof document === 'undefined') return;
     const root = document.documentElement;
     if (t === 'dark') {
       root.classList.add('dark');
@@ -27,6 +34,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const saved = localStorage.getItem('electrodrivers_theme') as Theme | null;
     const initial = saved === 'light' || saved === 'dark' ? saved : 'dark';
     setThemeState(initial);
@@ -35,7 +43,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    localStorage.setItem('electrodrivers_theme', t);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('electrodrivers_theme', t);
+    }
     applyTheme(t);
   };
 
@@ -51,10 +61,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useTheme() {
+export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    return defaultThemeContext;
   }
   return context;
 }

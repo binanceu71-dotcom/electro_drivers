@@ -12,6 +12,15 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  loading: true,
+  login: async () => ({ success: false, error: 'Инициализация авторизации...' }),
+  register: async () => ({ success: false, error: 'Инициализация авторизации...' }),
+  logout: async () => {},
+  refreshUser: async () => {}
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error(e);
     }
     setUser(null);
-    window.location.href = '/auth';
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth';
+    }
   };
 
   return (
@@ -90,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    return defaultAuthContext;
   }
   return context;
 }
