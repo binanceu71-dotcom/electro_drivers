@@ -5,20 +5,20 @@ services:
     container_name: electrodrivers_postgres
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-electrodrivers_db}
-      POSTGRES_USER: ${POSTGRES_USER:-electro_admin}
+      POSTGRES_DB: electrodrivers_db
+      POSTGRES_USER: electro_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisToVerySecurePassword2026!}
-      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./data/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-electro_admin} -d ${POSTGRES_DB:-electrodrivers_db}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U electro_admin -d electrodrivers_db"]
+      interval: 3s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     networks:
       - electro_network
 
@@ -35,7 +35,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-electro_admin}:${POSTGRES_PASSWORD:-ChangeThisToVerySecurePassword2026!}@postgres:5432/${POSTGRES_DB:-electrodrivers_db}
+      DATABASE_URL: postgresql://electro_admin:${POSTGRES_PASSWORD:-ChangeThisToVerySecurePassword2026!}@postgres:5432/electrodrivers_db
       SESSION_SECRET: ${SESSION_SECRET:-electrodrivers_super_secret_session_key_production_2026}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
