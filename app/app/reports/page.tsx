@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useToast } from '@/components/Toast';
 import { EmployeeReport, ReportStatus, ReportType } from '@/lib/types';
 import { isAdmin } from '@/lib/auth-helpers';
+import { safeCopyToClipboard } from '@/lib/clipboard';
 import { 
   FileText, Search, Check, X, Clock, AlertTriangle, 
   RefreshCw, Plus, Send, Code, Image as ImageIcon, 
@@ -166,14 +167,18 @@ export default function ReportsCrmPage() {
     }
   };
 
-  const copyWebhookCurl = () => {
+  const copyWebhookCurl = async () => {
     const curlCode = `curl -X POST https://electrodrivers.ru/api/crm/webhook \\
   -H "Content-Type: application/json" \\
   -d '${testJson.replace(/\n/g, '').replace(/\s+/g, ' ')}'`;
-    navigator.clipboard.writeText(curlCode);
-    setCopiedCurl(true);
-    toast.success('cURL команда скопирована');
-    setTimeout(() => setCopiedCurl(false), 3000);
+    const ok = await safeCopyToClipboard(curlCode);
+    if (ok) {
+      setCopiedCurl(true);
+      toast.success('cURL команда скопирована');
+      setTimeout(() => setCopiedCurl(false), 3000);
+    } else {
+      toast.error('Не удалось скопировать', 'Скопируйте команду вручную');
+    }
   };
 
   // Stats
