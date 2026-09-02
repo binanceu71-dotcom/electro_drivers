@@ -33,6 +33,5 @@ nginx
 certbot
 docker-compose.yml
 Dockerfile
-scripts
 DEPLOYMENT_GUIDE.md
 README.md
