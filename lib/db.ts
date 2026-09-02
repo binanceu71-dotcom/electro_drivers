@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { 
   UserProfile, Space, Article, AuditLog, 
-  OnboardingStep, UserOnboardingProgress, EmployeeReport, ReportStatus, ReportType 
+  OnboardingStep, UserOnboardingProgress, EmployeeReport, ReportStatus, ReportType,
+  QuizQuestion, StepQuizState, TrainingTrack
 } from './types';
 
 interface DatabaseSchema {
@@ -240,29 +241,93 @@ POST /api/crm/webhook
     {
       id: 'step-1',
       title: 'Изучение регламента допуска к смене',
-      description: 'Ознакомьтесь с правилами проверки оборудования перед выходом на линию.',
+      description: 'Ознакомьтесь с правилами проверки оборудования перед выходом на линию, затем сдайте тест.',
       category: 'Регламенты',
       article_id: 'art-001',
       order: 1,
-      duration_minutes: 10
+      duration_minutes: 10,
+      track: 'onboarding',
+      pass_score: 2,
+      questions: [
+        {
+          id: 'q-1-1',
+          text: 'Какой минимальный уровень заряда батареи требуется перед выходом на линию?',
+          options: ['50%', '65%', '80%', '100%'],
+          correct_index: 2
+        },
+        {
+          id: 'q-1-2',
+          text: 'Что необходимо сделать при обнаружении повреждения кабеля или изоляции?',
+          options: [
+            'Продолжить работу, отметив в отчете',
+            'Немедленно сообщить в диспетчерскую через Telegram-бота',
+            'Отремонтировать самостоятельно',
+            'Дождаться конца смены'
+          ],
+          correct_index: 1
+        },
+        {
+          id: 'q-1-3',
+          text: 'Что обязательно прикрепляется при передаче смены?',
+          options: [
+            'Фотоотчет показаний приборов',
+            'Скан паспорта',
+            'Копия трудового договора',
+            'Ничего'
+          ],
+          correct_index: 0
+        }
+      ]
     },
     {
       id: 'step-2',
       title: 'Стандарты зарядных станций и протоколы',
-      description: 'Изучите типы разъемов (CCS2, GB/T, Type 2) и правила проведения сессий зарядки.',
+      description: 'Изучите типы разъемов (CCS2, GB/T, Type 2) и правила проведения сессий зарядки, затем сдайте тест.',
       category: 'Инфраструктура',
       article_id: 'art-002',
       order: 2,
-      duration_minutes: 15
+      duration_minutes: 15,
+      track: 'onboarding',
+      pass_score: 2,
+      questions: [
+        {
+          id: 'q-2-1',
+          text: 'Какой стандарт применяется на скоростных магистральных хабах?',
+          options: ['Type 2 (Mennekes)', 'CCS Combo 2', 'CHAdeMO', 'Schuko'],
+          correct_index: 1
+        },
+        {
+          id: 'q-2-2',
+          text: 'Какая максимальная мощность у Type 2 (Mennekes)?',
+          options: ['до 22 кВт', 'до 100 кВт', 'до 250 кВт', 'до 360 кВт'],
+          correct_index: 0
+        }
+      ]
     },
     {
       id: 'step-3',
       title: 'Инструктаж по технике безопасности',
-      description: 'Ознакомьтесь с правилами безопасности при работе с высоковольтными системами.',
+      description: 'Ознакомьтесь с правилами безопасности при работе с высоковольтными системами, затем сдайте тест.',
       category: 'Безопасность',
       article_id: 'art-003',
       order: 3,
-      duration_minutes: 15
+      duration_minutes: 15,
+      track: 'onboarding',
+      pass_score: 2,
+      questions: [
+        {
+          id: 'q-3-1',
+          text: 'Под каким напряжением находятся тяговые батареи и силовая проводка?',
+          options: ['12V–24V DC', '110V–220V AC', '400V–800V DC', '1000V+ AC'],
+          correct_index: 2
+        },
+        {
+          id: 'q-3-2',
+          text: 'Какое безопасное расстояние при возникновении неисправности?',
+          options: ['Не менее 5 метров', 'Не менее 10 метров', 'Не менее 20 метров', 'Расстояние не важно'],
+          correct_index: 2
+        }
+      ]
     },
     {
       id: 'step-4',
@@ -270,7 +335,43 @@ POST /api/crm/webhook
       description: 'Отправьте статус смены в бота для проверки интеграции с CRM.',
       category: 'Отчетность',
       order: 4,
-      duration_minutes: 5
+      duration_minutes: 5,
+      track: 'onboarding'
+    },
+    {
+      id: 'att-1',
+      title: 'Аттестация: регламенты и техника безопасности',
+      description: 'Итоговая проверка знаний по регламентам допуска и работе с высоковольтными системами.',
+      category: 'Аттестация',
+      article_id: 'art-003',
+      order: 1,
+      duration_minutes: 20,
+      track: 'attestation',
+      pass_score: 2,
+      questions: [
+        {
+          id: 'aq-1-1',
+          text: 'Первое действие при возникновении неисправности высоковольтной системы?',
+          options: [
+            'Сфотографировать повреждение',
+            'Немедленно обесточить систему',
+            'Позвонить коллеге',
+            'Продолжить движение до базы'
+          ],
+          correct_index: 1
+        },
+        {
+          id: 'aq-1-2',
+          text: 'Куда отправляется экстренный отчет о происшествии?',
+          options: [
+            'На личную почту руководителя',
+            'В общий чат',
+            'Через CRM / Telegram-бота',
+            'Никуда, достаточно устного сообщения'
+          ],
+          correct_index: 2
+        }
+      ]
     }
   ],
   user_progress: {},
@@ -323,6 +424,7 @@ export function getDb(): DatabaseSchema {
       const fileData = fs.readFileSync(DB_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(fileData);
       if (!parsed.reports) parsed.reports = [];
+      migrateDb(parsed);
       memoryDb = parsed;
     } else {
       memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
@@ -333,6 +435,21 @@ export function getDb(): DatabaseSchema {
     memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
   }
   return memoryDb!;
+}
+
+/** Мягкая миграция старых данных: заполняем новые поля значениями по умолчанию. */
+function migrateDb(db: DatabaseSchema): void {
+  (db.users || []).forEach(u => {
+    if (!u.stage) u.stage = 'onboarding';
+    if (u.attestation_retake_enabled === undefined) u.attestation_retake_enabled = false;
+  });
+  (db.onboarding_steps || []).forEach(s => {
+    if (!s.track) s.track = 'onboarding';
+    if (!Array.isArray(s.questions)) s.questions = [];
+  });
+  Object.values(db.user_progress || {}).forEach(p => {
+    if (!p.quiz_states) p.quiz_states = {};
+  });
 }
 
 export function saveDb(data: DatabaseSchema): void {
@@ -377,6 +494,8 @@ export function createUser(userData: {
     telegram_nickname: userData.telegram_nickname.startsWith('@') ? userData.telegram_nickname : `@${userData.telegram_nickname}`,
     role: userData.role || 'user',
     status: userData.status || 'pending',
+    stage: 'onboarding' as const,
+    attestation_retake_enabled: false,
     full_name: userData.full_name || userData.telegram_nickname,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -447,6 +566,46 @@ export function updateUserRole(userId: string, role: 'user' | 'admin' | 'superad
     details: `Роль пользователя ${user.email} изменена с ${oldRole} на ${role}`,
     created_at: new Date().toISOString()
   });
+
+  saveDb(db);
+  const { password_hash, ...profile } = user;
+  return profile;
+}
+
+/** «Повышение» пользователя (онбординг -> аттестация) и режим пересдачи аттестации */
+export function updateUserTraining(
+  userId: string,
+  updates: { stage?: TrainingTrack; attestation_retake_enabled?: boolean },
+  actor: UserProfile
+) {
+  const db = getDb();
+  const user = db.users.find(u => u.id === userId);
+  if (!user) throw new Error('Пользователь не найден');
+
+  const changes: string[] = [];
+  if (updates.stage !== undefined && updates.stage !== user.stage) {
+    changes.push(`этап: ${user.stage || 'onboarding'} -> ${updates.stage}`);
+    user.stage = updates.stage;
+  }
+  if (updates.attestation_retake_enabled !== undefined && updates.attestation_retake_enabled !== user.attestation_retake_enabled) {
+    changes.push(`пересдача аттестации: ${updates.attestation_retake_enabled ? 'разрешена' : 'запрещена'}`);
+    user.attestation_retake_enabled = updates.attestation_retake_enabled;
+  }
+  user.updated_at = new Date().toISOString();
+
+  if (changes.length > 0) {
+    db.audit_logs.unshift({
+      id: `log-${Date.now()}`,
+      actor_id: actor.id,
+      actor_email: actor.email,
+      actor_telegram: actor.telegram_nickname,
+      action: 'USER_TRAINING_CHANGE',
+      target_id: user.id,
+      target_type: 'user',
+      details: `Обучение пользователя ${user.email}: ${changes.join('; ')}`,
+      created_at: new Date().toISOString()
+    });
+  }
 
   saveDb(db);
   const { password_hash, ...profile } = user;
@@ -526,6 +685,39 @@ export function createSpace(spaceData: Omit<Space, 'id'>, actor: UserProfile): S
 
   saveDb(db);
   return newSpace;
+}
+
+export function deleteSpace(id: string, force: boolean, actor: UserProfile): { success: boolean; deleted_articles: number } {
+  const db = getDb();
+  const idx = db.spaces.findIndex(s => s.id === id);
+  if (idx === -1) throw new Error('Пространство не найдено');
+  const target = db.spaces[idx];
+
+  const articlesInSpace = db.articles.filter(a => a.space_id === id);
+  if (articlesInSpace.length > 0 && !force) {
+    const err: any = new Error(`В пространстве ${articlesInSpace.length} статей. Подтвердите удаление вместе со статьями.`);
+    err.code = 'SPACE_NOT_EMPTY';
+    err.articles_count = articlesInSpace.length;
+    throw err;
+  }
+
+  db.articles = db.articles.filter(a => a.space_id !== id);
+  db.spaces.splice(idx, 1);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'SPACE_DELETE',
+    target_id: id,
+    target_type: 'space',
+    details: `Удалено пространство: "${target.name}"${articlesInSpace.length ? ` вместе с ${articlesInSpace.length} статьями` : ''}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return { success: true, deleted_articles: articlesInSpace.length };
 }
 
 export function getAllArticles(): Article[] {
@@ -790,10 +982,159 @@ export function getAuditLogs(): AuditLog[] {
   return db.audit_logs;
 }
 
-// ================= ONBOARDING =================
-export function getOnboardingSteps(): OnboardingStep[] {
+// ================= ONBOARDING & ATTESTATION =================
+export function getOnboardingSteps(track?: TrainingTrack): OnboardingStep[] {
   const db = getDb();
-  return db.onboarding_steps.sort((a, b) => a.order - b.order);
+  const steps = db.onboarding_steps.filter(s => !track || (s.track || 'onboarding') === track);
+  return steps.sort((a, b) => a.order - b.order);
+}
+
+export function getOnboardingStepById(id: string): OnboardingStep | undefined {
+  const db = getDb();
+  return db.onboarding_steps.find(s => s.id === id);
+}
+
+export function createOnboardingStep(data: {
+  title: string;
+  description?: string;
+  category?: string;
+  article_id?: string;
+  duration_minutes?: number;
+  track?: TrainingTrack;
+  questions?: QuizQuestion[];
+  pass_score?: number;
+}, actor: UserProfile): OnboardingStep {
+  const db = getDb();
+  const track: TrainingTrack = data.track === 'attestation' ? 'attestation' : 'onboarding';
+  const sameTrack = db.onboarding_steps.filter(s => (s.track || 'onboarding') === track);
+  const questions = sanitizeQuestions(data.questions);
+
+  const step: OnboardingStep = {
+    id: `step-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    title: data.title,
+    description: data.description || '',
+    category: data.category || (track === 'attestation' ? 'Аттестация' : 'Общее'),
+    article_id: data.article_id || undefined,
+    order: sameTrack.length + 1,
+    duration_minutes: Math.max(1, Number(data.duration_minutes) || 10),
+    track,
+    questions,
+    pass_score: normalizePassScore(data.pass_score, questions.length)
+  };
+  db.onboarding_steps.push(step);
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'TRAINING_STEP_CREATE',
+    target_id: step.id,
+    target_type: 'system',
+    details: `Создан шаг (${track}): "${step.title}", вопросов: ${questions.length}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return step;
+}
+
+export function updateOnboardingStep(id: string, updates: {
+  title?: string;
+  description?: string;
+  category?: string;
+  article_id?: string | null;
+  duration_minutes?: number;
+  order?: number;
+  track?: TrainingTrack;
+  questions?: QuizQuestion[];
+  pass_score?: number;
+}, actor: UserProfile): OnboardingStep {
+  const db = getDb();
+  const step = db.onboarding_steps.find(s => s.id === id);
+  if (!step) throw new Error('Шаг не найден');
+
+  if (updates.title !== undefined) step.title = updates.title;
+  if (updates.description !== undefined) step.description = updates.description;
+  if (updates.category !== undefined) step.category = updates.category;
+  if (updates.article_id !== undefined) step.article_id = updates.article_id || undefined;
+  if (updates.duration_minutes !== undefined) step.duration_minutes = Math.max(1, Number(updates.duration_minutes) || 10);
+  if (updates.order !== undefined) step.order = Number(updates.order) || step.order;
+  if (updates.track !== undefined) step.track = updates.track === 'attestation' ? 'attestation' : 'onboarding';
+  if (updates.questions !== undefined) step.questions = sanitizeQuestions(updates.questions);
+  const qCount = (step.questions || []).length;
+  if (updates.pass_score !== undefined || updates.questions !== undefined) {
+    step.pass_score = normalizePassScore(updates.pass_score !== undefined ? updates.pass_score : step.pass_score, qCount);
+  }
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'TRAINING_STEP_UPDATE',
+    target_id: step.id,
+    target_type: 'system',
+    details: `Обновлен шаг (${step.track}): "${step.title}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return step;
+}
+
+export function deleteOnboardingStep(id: string, actor: UserProfile): { success: boolean } {
+  const db = getDb();
+  const idx = db.onboarding_steps.findIndex(s => s.id === id);
+  if (idx === -1) throw new Error('Шаг не найден');
+  const target = db.onboarding_steps[idx];
+  db.onboarding_steps.splice(idx, 1);
+
+  // Подчищаем прогресс всех пользователей по удаленному шагу
+  Object.values(db.user_progress || {}).forEach(p => {
+    p.completed_step_ids = p.completed_step_ids.filter(sid => sid !== id);
+    if (p.quiz_states && p.quiz_states[id]) delete p.quiz_states[id];
+  });
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: actor.id,
+    actor_email: actor.email,
+    actor_telegram: actor.telegram_nickname,
+    action: 'TRAINING_STEP_DELETE',
+    target_id: id,
+    target_type: 'system',
+    details: `Удален шаг (${target.track || 'onboarding'}): "${target.title}"`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+  return { success: true };
+}
+
+function sanitizeQuestions(raw?: QuizQuestion[]): QuizQuestion[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(q => q && typeof q.text === 'string' && q.text.trim() && Array.isArray(q.options))
+    .map((q, i) => {
+      const options = q.options.map(o => String(o || '').trim()).filter(Boolean);
+      let correct = Number(q.correct_index);
+      if (!Number.isInteger(correct) || correct < 0 || correct >= options.length) correct = 0;
+      return {
+        id: q.id && String(q.id).trim() ? String(q.id) : `q-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 5)}`,
+        text: q.text.trim(),
+        options,
+        correct_index: correct
+      };
+    })
+    .filter(q => q.options.length >= 2);
+}
+
+function normalizePassScore(passScore: number | undefined, questionCount: number): number | undefined {
+  if (questionCount === 0) return undefined;
+  const n = Number(passScore);
+  if (!Number.isInteger(n) || n < 1) return questionCount;
+  return Math.min(n, questionCount);
 }
 
 export function getUserOnboardingProgress(userId: string): UserOnboardingProgress {
@@ -802,27 +1143,30 @@ export function getUserOnboardingProgress(userId: string): UserOnboardingProgres
     db.user_progress[userId] = {
       user_id: userId,
       completed_step_ids: [],
+      quiz_states: {},
       started_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     saveDb(db);
   }
-  return db.user_progress[userId];
+  const prog = db.user_progress[userId];
+  if (!prog.quiz_states) prog.quiz_states = {};
+  return prog;
 }
 
+/**
+ * Ручное завершение шага. Разрешено ТОЛЬКО для шагов без теста.
+ * Шаги с тестом завершаются исключительно через успешную сдачу (submitQuizAttempt).
+ */
 export function toggleOnboardingStep(userId: string, stepId: string): UserOnboardingProgress {
   const db = getDb();
-  let prog = db.user_progress[userId];
-  if (!prog) {
-    prog = {
-      user_id: userId,
-      completed_step_ids: [],
-      started_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    db.user_progress[userId] = prog;
+  const step = db.onboarding_steps.find(s => s.id === stepId);
+  if (!step) throw new Error('Шаг не найден');
+  if ((step.questions || []).length > 0) {
+    throw new Error('Этот шаг завершается только успешной сдачей теста');
   }
 
+  const prog = getUserOnboardingProgress(userId);
   const index = prog.completed_step_ids.indexOf(stepId);
   if (index >= 0) {
     prog.completed_step_ids.splice(index, 1);
@@ -833,4 +1177,130 @@ export function toggleOnboardingStep(userId: string, stepId: string): UserOnboar
 
   saveDb(db);
   return prog;
+}
+
+/**
+ * Сдача теста по шагу.
+ * - Первая попытка: отвечаются все вопросы.
+ * - Пересдача: только вопросы, отвеченные неверно в прошлой попытке.
+ * - Успех: суммарное число правильно отвеченных вопросов >= pass_score.
+ * - Онбординг: пересдачи не ограничены.
+ * - Аттестация: пересдача только при включенном admin-флаге attestation_retake_enabled.
+ */
+export function submitQuizAttempt(
+  user: UserProfile,
+  stepId: string,
+  answers: Record<string, number>
+): {
+  passed: boolean;
+  score_total: number;
+  pass_score: number;
+  questions_total: number;
+  wrong_question_ids: string[];
+  retake_available: boolean;
+  progress: UserOnboardingProgress;
+} {
+  const db = getDb();
+  const step = db.onboarding_steps.find(s => s.id === stepId);
+  if (!step) throw new Error('Шаг не найден');
+
+  const questions = step.questions || [];
+  if (questions.length === 0) throw new Error('У этого шага нет теста');
+
+  const track: TrainingTrack = step.track || 'onboarding';
+  if ((user.stage || 'onboarding') !== track) {
+    throw new Error(track === 'attestation'
+      ? 'Аттестация доступна только повышенным пользователям'
+      : 'Этот шаг относится к онбордингу');
+  }
+
+  const prog = getUserOnboardingProgress(user.id);
+  const states = prog.quiz_states!;
+  const state: StepQuizState | undefined = states[stepId];
+
+  if (state?.passed) throw new Error('Тест уже успешно сдан');
+
+  const isRetake = !!state && state.attempts > 0;
+  if (isRetake && track === 'attestation' && !user.attestation_retake_enabled) {
+    throw new Error('Пересдача аттестации возможна только по решению администратора');
+  }
+
+  // Какие вопросы отвечаются в этой попытке
+  let askedIds: string[] = isRetake
+    ? state!.pending_question_ids.filter(qid => questions.some(q => q.id === qid))
+    : questions.map(q => q.id);
+
+  // Если вопросы изменились после прошлой попытки и «ожидающих» не осталось —
+  // спрашиваем всё, что еще не отвечено правильно
+  if (isRetake && askedIds.length === 0) {
+    askedIds = questions
+      .filter(q => !state!.correct_question_ids.includes(q.id))
+      .map(q => q.id);
+  }
+
+  // Проверяем, что даны ответы на все вопросы попытки
+  for (const qid of askedIds) {
+    if (!(qid in answers) || !Number.isInteger(Number(answers[qid]))) {
+      throw new Error('Нужно ответить на все вопросы теста');
+    }
+  }
+
+  const prevCorrect = new Set(isRetake ? state!.correct_question_ids : []);
+  const wrongNow: string[] = [];
+
+  for (const qid of askedIds) {
+    const q = questions.find(x => x.id === qid)!;
+    if (Number(answers[qid]) === q.correct_index) {
+      prevCorrect.add(qid);
+    } else {
+      prevCorrect.delete(qid);
+      wrongNow.push(qid);
+    }
+  }
+
+  const passScore = normalizePassScore(step.pass_score, questions.length) || questions.length;
+  const scoreTotal = questions.filter(q => prevCorrect.has(q.id)).length;
+  const passed = scoreTotal >= passScore;
+
+  const newState: StepQuizState = {
+    attempts: (state?.attempts || 0) + 1,
+    correct_question_ids: questions.filter(q => prevCorrect.has(q.id)).map(q => q.id),
+    pending_question_ids: passed ? [] : wrongNow,
+    passed,
+    last_score: scoreTotal,
+    passed_at: passed ? new Date().toISOString() : state?.passed_at,
+    updated_at: new Date().toISOString()
+  };
+  states[stepId] = newState;
+
+  if (passed && !prog.completed_step_ids.includes(stepId)) {
+    prog.completed_step_ids.push(stepId);
+  }
+  prog.updated_at = new Date().toISOString();
+
+  db.audit_logs.unshift({
+    id: `log-${Date.now()}`,
+    actor_id: user.id,
+    actor_email: user.email,
+    actor_telegram: user.telegram_nickname,
+    action: passed ? 'QUIZ_PASSED' : 'QUIZ_FAILED',
+    target_id: stepId,
+    target_type: 'system',
+    details: `${track === 'attestation' ? 'Аттестация' : 'Онбординг'} "${step.title}": попытка ${newState.attempts}, результат ${scoreTotal}/${questions.length} (порог ${passScore}) — ${passed ? 'СДАН' : 'не сдан'}`,
+    created_at: new Date().toISOString()
+  });
+
+  saveDb(db);
+
+  const retakeAvailable = !passed && (track === 'onboarding' || !!user.attestation_retake_enabled);
+
+  return {
+    passed,
+    score_total: scoreTotal,
+    pass_score: passScore,
+    questions_total: questions.length,
+    wrong_question_ids: wrongNow,
+    retake_available: retakeAvailable,
+    progress: prog
+  };
 }

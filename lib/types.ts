@@ -1,5 +1,6 @@
 export type UserRole = 'user' | 'admin' | 'superadmin';
 export type UserStatus = 'pending' | 'active' | 'blocked';
+export type TrainingTrack = 'onboarding' | 'attestation';
 
 export interface UserProfile {
   id: string;
@@ -9,6 +10,10 @@ export interface UserProfile {
   status: UserStatus;
   full_name?: string;
   avatar_url?: string;
+  /** Этап обучения: onboarding (по умолчанию) или attestation (после «повышения» админом) */
+  stage?: TrainingTrack;
+  /** Разрешена ли пересдача аттестации (включает админ персонально) */
+  attestation_retake_enabled?: boolean;
   created_at: string;
   updated_at: string;
   last_login_at?: string;
@@ -55,6 +60,14 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface QuizQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  /** Индекс правильного варианта в options */
+  correct_index: number;
+}
+
 export interface OnboardingStep {
   id: string;
   title: string;
@@ -63,11 +76,32 @@ export interface OnboardingStep {
   article_id?: string;
   order: number;
   duration_minutes: number;
+  /** Трек: онбординг (по умолчанию) или аттестация */
+  track?: TrainingTrack;
+  /** Вопросы теста. Если пусто — шаг завершается вручную кнопкой. */
+  questions?: QuizQuestion[];
+  /** Сколько правильных ответов (суммарно по всем вопросам) нужно для успешной сдачи. По умолчанию — все. */
+  pass_score?: number;
+}
+
+/** Состояние сдачи теста по конкретному шагу */
+export interface StepQuizState {
+  attempts: number;
+  /** Вопросы, на которые уже отвечено правильно (накопительно) */
+  correct_question_ids: string[];
+  /** Вопросы, оставшиеся для пересдачи (отвечены неверно в прошлой попытке) */
+  pending_question_ids: string[];
+  passed: boolean;
+  last_score?: number;
+  passed_at?: string;
+  updated_at: string;
 }
 
 export interface UserOnboardingProgress {
   user_id: string;
   completed_step_ids: string[];
+  /** step_id -> состояние теста */
+  quiz_states?: Record<string, StepQuizState>;
   started_at: string;
   updated_at: string;
 }

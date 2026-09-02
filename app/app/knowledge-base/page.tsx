@@ -140,6 +140,29 @@ export default function KnowledgeBasePage() {
     }
   };
 
+  const handleDeleteSpace = async (sp: Space) => {
+    const count = articles.filter(a => a.space_id === sp.id).length;
+    const confirmMsg = count > 0
+      ? `Удалить пространство «${sp.name}» ВМЕСТЕ с ${count} статьями? Действие необратимо.`
+      : `Удалить пустое пространство «${sp.name}»?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/spaces/${sp.id}?force=${count > 0 ? '1' : '0'}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Пространство удалено', count > 0 ? `Вместе со статьями: ${data.deleted_articles}` : undefined);
+        setSpaces(prev => prev.filter(s => s.id !== sp.id));
+        setArticles(prev => prev.filter(a => a.space_id !== sp.id));
+        if (selectedSpaceId === sp.id) setSelectedSpaceId('all');
+      } else {
+        toast.error('Ошибка удаления', data.error);
+      }
+    } catch (err) {
+      toast.error('Сбой сервера');
+    }
+  };
+
   const handleExportMarkdown = (art: Article) => {
     const blob = new Blob([art.content], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -434,20 +457,32 @@ export default function KnowledgeBasePage() {
           const isSelected = selectedSpaceId === sp.id;
           const count = articles.filter(a => a.space_id === sp.id).length;
           return (
-            <button
-              key={sp.id}
-              onClick={() => setSelectedSpaceId(sp.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                isSelected
-                  ? 'bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-300 text-white dark:text-white light:text-black font-semibold'
-                  : 'bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 text-neutral-400 dark:text-neutral-400 light:text-neutral-600'
-              }`}
-            >
-              <span>{sp.name}</span>
-              <span className="text-[10px] font-mono text-neutral-500">
-                {count}
-              </span>
-            </button>
+            <div key={sp.id} className="flex items-center shrink-0">
+              <button
+                onClick={() => setSelectedSpaceId(sp.id)}
+                className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                  isSelected && canEdit ? 'rounded-l-lg' : 'rounded-lg'
+                } ${
+                  isSelected
+                    ? 'bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-300 text-white dark:text-white light:text-black font-semibold'
+                    : 'bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 text-neutral-400 dark:text-neutral-400 light:text-neutral-600'
+                }`}
+              >
+                <span>{sp.name}</span>
+                <span className="text-[10px] font-mono text-neutral-500">
+                  {count}
+                </span>
+              </button>
+              {isSelected && canEdit && (
+                <button
+                  onClick={() => handleDeleteSpace(sp)}
+                  className="px-2 py-1.5 rounded-r-lg bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-300 border-l border-neutral-700 dark:border-neutral-700 light:border-neutral-400 text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black transition-colors"
+                  title="Удалить пространство"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>

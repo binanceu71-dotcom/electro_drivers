@@ -9,7 +9,7 @@ import SearchModal from '@/components/SearchModal';
 import { 
   BookOpen, Compass, FileCheck, 
   Shield, Settings, LogOut, Search, Bell, Sun, 
-  Moon, Menu, X, ShieldAlert
+  Moon, Menu, X, ShieldAlert, GraduationCap
 } from 'lucide-react';
 import { isSuperAdmin, isAdmin } from '@/lib/auth-helpers';
 
@@ -166,7 +166,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span>База знаний</span>
               </Link>
 
-              {/* 2. Onboarding */}
+              {/* 2. Onboarding / Attestation */}
               <Link
                 href="/app/onboarding"
                 onClick={() => setSidebarOpen(false)}
@@ -177,8 +177,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Compass className="w-4 h-4 shrink-0" />
-                <span>Онбординг</span>
+                <span>{user?.stage === 'attestation' ? 'Аттестация' : 'Онбординг'}</span>
               </Link>
+
+              {/* 2b. Training management (Admin+) */}
+              {isUserAdmin && (
+                <Link
+                  href="/app/admin/onboarding"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    pathname.startsWith('/app/admin/onboarding')
+                      ? 'bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-200 text-white dark:text-white light:text-black font-semibold'
+                      : 'text-neutral-400 dark:text-neutral-400 light:text-neutral-600 hover:bg-neutral-900 dark:hover:bg-neutral-900 light:hover:bg-neutral-100 hover:text-white dark:hover:text-white light:hover:text-black'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <GraduationCap className="w-4 h-4 shrink-0" />
+                    <span>Обучение</span>
+                  </div>
+                  <span className="text-[9px] font-mono px-1 rounded border border-neutral-700 dark:border-neutral-700 light:border-neutral-300 uppercase">
+                    Admin
+                  </span>
+                </Link>
+              )}
 
               {/* 3. CRM Reports (Only Admin and above) */}
               {isUserAdmin && (
