@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { safeGetItem, safeSetItem } from './storage';
 
 type Theme = 'dark' | 'light';
 
@@ -18,34 +19,45 @@ const defaultThemeContext: ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const THEME_STORAGE_KEY = 'electrodrivers_theme';
+
+/**
+ * Чтение сохранённой темы. Безопасно: ошибки доступа к localStorage
+ * (приватный режим, заблокированное хранилище) не роняют приложение.
+ */
+function getStoredTheme(): Theme | null {
+  const saved = safeGetItem(THEME_STORAGE_KEY);
+  return saved === 'light' || saved === 'dark' ? saved : null;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
 
   const applyTheme = (t: Theme) => {
     if (typeof document === 'undefined') return;
-    const root = document.documentElement;
-    if (t === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.remove('dark');
-      root.classList.add('light');
+    try {
+      const root = document.documentElement;
+      if (t === 'dark') {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      } else {
+        root.classList.remove('dark');
+        root.classList.add('light');
+      }
+    } catch {
+      // Не критично: DOM-классы темы не применились, состояние остаётся в React.
     }
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem('electrodrivers_theme') as Theme | null;
-    const initial = saved === 'light' || saved === 'dark' ? saved : 'dark';
+    const initial = getStoredTheme() ?? 'dark';
     setThemeState(initial);
     applyTheme(initial);
   }, []);
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('electrodrivers_theme', t);
-    }
+    safeSetItem(THEME_STORAGE_KEY, t);
     applyTheme(t);
   };
 

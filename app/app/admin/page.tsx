@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useToast } from '@/components/Toast';
 import { UserProfile, AuditLog } from '@/lib/types';
 import { isSuperAdmin } from '@/lib/auth-helpers';
+import { safeCopyToClipboard } from '@/lib/clipboard';
 import { 
   Shield, Search, Clock, 
   Trash2, RefreshCw, Copy, Check, Loader2
@@ -169,11 +170,15 @@ create policy "SuperAdmin Update Profiles"
     }
   };
 
-  const copySqlSchema = () => {
-    navigator.clipboard.writeText(SUPABASE_SCHEMA_PREVIEW);
-    setSqlCopied(true);
-    toast.success('SQL схема скопирована');
-    setTimeout(() => setSqlCopied(false), 3000);
+  const copySqlSchema = async () => {
+    const ok = await safeCopyToClipboard(SUPABASE_SCHEMA_PREVIEW);
+    if (ok) {
+      setSqlCopied(true);
+      toast.success('SQL схема скопирована');
+      setTimeout(() => setSqlCopied(false), 3000);
+    } else {
+      toast.error('Не удалось скопировать', 'Скопируйте текст вручную');
+    }
   };
 
   const filteredUsers = users.filter(u => {
