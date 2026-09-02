@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { Space, Article } from '@/lib/types';
+import Markdown from '@/components/Markdown';
+import { safeGetItem, safeSetItem, safeRemoveItem } from '@/lib/storage';
 import { 
   Save, ArrowLeft, Eye, Heading1, Heading2, Heading3,
   Bold, Italic, Strikethrough, Underline, Code, List, ListOrdered, CheckSquare,
   Info, AlertTriangle, AlertCircle, Sparkles, Table, Minus, Pin, Tag,
-  Link as LinkIcon, Image as ImageIcon, Video, Smile, X, ExternalLink
+  Link as LinkIcon, Image as ImageIcon, Video, Smile, X, ExternalLink,
+  Upload, Loader2, RotateCcw
 } from 'lucide-react';
 
 interface ArticleEditorProps {
@@ -30,6 +33,73 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
   const [isPinned, setIsPinned] = useState(Boolean(initialArticle?.is_pinned));
   const [previewMode, setPreviewMode] = useState<'split' | 'edit' | 'preview'>('split');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ===== Автосохранение черновика (localStorage) =====
+  const draftKey = `article-draft:${isNew ? 'new' : (initialArticle?.id || 'new')}`;
+  const [draftBanner, setDraftBanner] = useState<{ ts: number; data: any } | null>(null);
+  const draftLoadedRef = useRef(false);
+
+  // На мобильных по умолчанию показываем только редактор (сплит слишком тесный)
+  useEffect(() => {
+    try {
+      if (window.innerWidth < 768) setPreviewMode('edit');
+    } catch {}
+  }, []);
+
+  // При открытии — проверяем, есть ли несохраненный черновик
+  useEffect(() => {
+    if (draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+    try {
+      const raw = safeGetItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const differs = (draft.content || '') !== (initialArticle?.content || '')
+        || (draft.title || '') !== (initialArticle?.title || '');
+      if (differs && (draft.content || draft.title)) {
+        setDraftBanner({ ts: draft.ts || Date.now(), data: draft });
+      } else {
+        safeRemoveItem(draftKey);
+      }
+    } catch {}
+  }, [draftKey]);
+
+  // Дебаунс-сохранение черновика при любом изменении полей
+  useEffect(() => {
+    if (!draftLoadedRef.current) return;
+    const timer = setTimeout(() => {
+      try {
+        const differs = content !== (initialArticle?.content || '') || title !== (initialArticle?.title || '');
+        if (!differs) return;
+        safeSetItem(draftKey, JSON.stringify({
+          ts: Date.now(),
+          space_id: spaceId, title, content, excerpt,
+          tags: tagsInput, is_pinned: isPinned,
+        }));
+      } catch {}
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [title, content, excerpt, tagsInput, spaceId, isPinned, draftKey]);
+
+  const restoreDraft = () => {
+    if (!draftBanner) return;
+    const d = draftBanner.data;
+    if (d.space_id) setSpaceId(d.space_id);
+    setTitle(d.title || '');
+    setContent(d.content || '');
+    setExcerpt(d.excerpt || '');
+    setTagsInput(d.tags || '');
+    setIsPinned(Boolean(d.is_pinned));
+    setDraftBanner(null);
+    toast.success('Черновик восстановлен');
+  };
+
+  const discardDraft = () => {
+    safeRemoveItem(draftKey);
+    setDraftBanner(null);
+  };
 
   // Modals for insertion
   const [modalType, setModalType] = useState<'link' | 'image' | 'video' | null>(null);
@@ -67,6 +137,69 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
       textarea.focus();
       textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
     }, 50);
+  };
+
+  // ===== Загрузка файлов (картинки / GIF / видео) =====
+  const insertBlockAtCursor = useCallback((snippet: string) => {
+    const textarea = textareaRef.current;
+    setContent(prev => {
+      const start = textarea ? textarea.selectionStart : prev.length;
+      const end = textarea ? textarea.selectionEnd : prev.length;
+      return prev.substring(0, start) + snippet + prev.substring(end);
+    });
+  }, []);
+
+  const uploadFile = useCallback(async (file: File) => {
+    const isMedia = file.type.startsWith('image/') || file.type.startsWith('video/');
+    if (!isMedia) {
+      toast.error('Можно загружать только изображения, GIF и видео');
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/uploads', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        const baseName = (file.name || '').replace(/\.[^.]+$/, '');
+        const snippet = data.kind === 'video'
+          ? `\n[video: ${data.url}](${baseName || 'Видеоматериал'})\n`
+          : `\n![${baseName || 'Изображение'}](${data.url})\n`;
+        insertBlockAtCursor(snippet);
+        toast.success('Файл загружен и вставлен в статью');
+      } else {
+        toast.error('Ошибка загрузки', data.error);
+      }
+    } catch {
+      toast.error('Сбой при загрузке файла');
+    } finally {
+      setUploading(false);
+    }
+  }, [insertBlockAtCursor, toast]);
+
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) uploadFile(f);
+    e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData?.files || [])
+      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    if (files.length > 0) {
+      e.preventDefault();
+      files.forEach(uploadFile);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.dataTransfer?.files || [])
+      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    if (files.length > 0) {
+      e.preventDefault();
+      files.forEach(uploadFile);
+    }
   };
 
   const handleOpenInsertModal = (type: 'link' | 'image' | 'video') => {
@@ -134,6 +267,7 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
 
       const data = await res.json();
       if (res.ok) {
+        safeRemoveItem(draftKey);
         toast.success(isNew ? 'Статья создана' : 'Статья обновлена');
         router.push(`/app/knowledge-base?article=${data.article?.id || initialArticle?.id}`);
       } else {
@@ -144,80 +278,6 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
     } finally {
       setSaving(false);
     }
-  };
-
-  // Preview renderer
-  const renderPreview = (text: string) => {
-    const lines = text.split('\n');
-    return (
-      <div className="space-y-3 text-xs text-neutral-300 dark:text-neutral-300 light:text-neutral-800 leading-relaxed">
-        {lines.map((line, idx) => {
-          if (line.startsWith('## ')) {
-            return <h2 key={idx} className="text-base font-semibold text-neutral-100 dark:text-neutral-100 light:text-neutral-900 pt-2 pb-1 border-b border-neutral-800 dark:border-neutral-800 light:border-neutral-200">{line.replace('## ', '')}</h2>;
-          }
-          if (line.startsWith('### ')) {
-            return <h3 key={idx} className="text-xs font-semibold uppercase tracking-wider text-neutral-200 dark:text-neutral-200 light:text-neutral-900 pt-2">{line.replace('### ', '')}</h3>;
-          }
-          if (line.startsWith('> ')) {
-            return (
-              <div key={idx} className="p-3 rounded bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border-l-2 border-neutral-400 dark:border-neutral-400 light:border-black text-xs text-neutral-200 dark:text-neutral-200 light:text-neutral-900">
-                {line.replace('> ', '')}
-              </div>
-            );
-          }
-          if (line.startsWith('- [x] ') || line.startsWith('- [ ] ')) {
-            const isChecked = line.startsWith('- [x] ');
-            const label = line.replace(/- \[[ x]\] /, '');
-            return (
-              <div key={idx} className="flex items-center gap-2">
-                <input type="checkbox" checked={isChecked} readOnly className="rounded border-neutral-600" />
-                <span className={isChecked ? 'line-through text-neutral-500' : ''}>{label}</span>
-              </div>
-            );
-          }
-          if (line.startsWith('- ') || line.startsWith('* ')) {
-            return <li key={idx} className="ml-4 list-disc">{line.substring(2)}</li>;
-          }
-          if (line.startsWith('![') && line.includes('](')) {
-            const match = line.match(/!\[(.*?)\]\((.*?)\)/);
-            if (match) {
-              return (
-                <div key={idx} className="my-2 rounded-lg overflow-hidden border border-neutral-800 dark:border-neutral-800 light:border-neutral-200">
-                  <img src={match[2]} alt={match[1]} className="w-full max-h-72 object-cover" />
-                  {match[1] && <div className="p-1.5 text-[10px] text-neutral-500 font-mono text-center bg-neutral-950 dark:bg-neutral-950 light:bg-neutral-100">{match[1]}</div>}
-                </div>
-              );
-            }
-          }
-          if (line.startsWith('[video: ') && line.includes('](')) {
-            const match = line.match(/\[video:\s*(.*?)\]\((.*?)\)/);
-            if (match) {
-              return (
-                <div key={idx} className="my-2 p-3 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-mono text-xs">
-                    <Video className="w-4 h-4 text-neutral-400" />
-                    <span>{match[2] || 'Видеоматериал'}</span>
-                  </div>
-                  <a href={match[1]} target="_blank" rel="noopener noreferrer" className="text-xs underline flex items-center gap-1 font-mono">
-                    Смотреть <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              );
-            }
-          }
-          if (line.startsWith('```')) {
-            return <div key={idx} className="font-mono text-xs bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 p-2 rounded border border-neutral-800 dark:border-neutral-800 light:border-neutral-200">{line}</div>;
-          }
-          if (line.trim() === '---') {
-            return <hr key={idx} className="border-neutral-800 dark:border-neutral-800 light:border-neutral-200 my-3" />;
-          }
-          if (line.trim().length > 0) {
-            return <p key={idx}>{line}</p>;
-          }
-          return null;
-        })}
-      </div>
-    );
   };
 
   return (
@@ -236,8 +296,8 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 p-0.5 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 p-0.5 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 text-xs">
             <button
               onClick={() => setPreviewMode('edit')}
               className={`px-2.5 py-1 rounded transition-colors ${previewMode === 'edit' ? 'bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-300 text-white dark:text-white light:text-black font-medium' : 'text-neutral-400 dark:text-neutral-400 light:text-neutral-600'}`}
@@ -268,6 +328,32 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
           </button>
         </div>
       </div>
+
+      {/* Draft restore banner */}
+      {draftBanner && (
+        <div className="glass-panel rounded-xl p-3 border border-amber-700/40 bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2 text-xs text-amber-200/90">
+            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              Найден несохраненный черновик от {new Date(draftBanner.ts).toLocaleString('ru-RU')}. Восстановить?
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={restoreDraft}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/90 hover:bg-amber-400 text-black transition-colors"
+            >
+              Восстановить
+            </button>
+            <button
+              onClick={discardDraft}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 hover:bg-neutral-800 border border-neutral-700 dark:border-neutral-700 light:border-neutral-300 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 transition-colors"
+            >
+              Удалить черновик
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Meta Controls */}
       <div className="glass-panel rounded-xl p-4 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 shadow-subtle space-y-3">
@@ -421,6 +507,24 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
 
           <button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="p-1 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 rounded flex items-center gap-1 text-xs disabled:opacity-50"
+            title="Загрузить файл с устройства (фото, GIF, видео). Также можно вставить из буфера обмена (Ctrl+V) или перетащить в текст"
+          >
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline text-[11px]">{uploading ? 'Загрузка...' : 'Загрузить'}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/ogg"
+            onChange={handleFilePick}
+            className="hidden"
+          />
+
+          <button
+            type="button"
             onClick={() => setShowEmojiBar(!showEmojiBar)}
             className={`p-1 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 rounded flex items-center gap-1 text-xs ${showEmojiBar ? 'bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-300' : ''}`}
             title="Вставить эмодзи"
@@ -517,7 +621,9 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Содержание статьи в формате Markdown (поддерживаются ссылки [текст](url), фото ![alt](url), видео, таблицы и списки)..."
+                onPaste={handlePaste}
+                onDrop={handleDrop}
+                placeholder="Содержание статьи в формате Markdown (поддерживаются ссылки [текст](url), фото ![alt](url), видео, таблицы и списки). Картинки можно вставлять из буфера обмена (Ctrl+V) или перетаскивать сюда..."
                 className="w-full flex-1 bg-transparent text-xs font-mono text-neutral-100 dark:text-neutral-100 light:text-neutral-900 placeholder-neutral-600 outline-none resize-none leading-relaxed"
                 rows={22}
               />
@@ -530,7 +636,7 @@ export default function ArticleEditor({ initialArticle, isNew = false }: Article
                 Предварительный просмотр
               </div>
               {content ? (
-                renderPreview(content)
+                <Markdown content={content} />
               ) : (
                 <div className="text-neutral-500 text-xs italic">Текст предпросмотра появится здесь...</div>
               )}

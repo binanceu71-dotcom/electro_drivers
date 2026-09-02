@@ -23,6 +23,16 @@ echo "==> 1/5 Синхронизация кода с origin/main"
 git fetch origin main
 git reset --hard origin/main
 
+echo "==> Бэкап данных перед деплоем"
+mkdir -p "${HOME}/electrodrivers_backups"
+if docker compose exec -T app cat data/electrodrivers_db.json > "${HOME}/electrodrivers_backups/db_$(date +%F_%H%M%S).json" 2>/dev/null; then
+  echo "    Бэкап сохранен в ~/electrodrivers_backups/"
+else
+  echo "    Контейнер app не запущен — бэкап пропущен"
+fi
+# Ротация: храним 20 последних бэкапов
+ls -t "${HOME}/electrodrivers_backups" 2>/dev/null | tail -n +21 | while read -r f; do rm -f "${HOME}/electrodrivers_backups/${f}"; done
+
 export GIT_SHA="$(git rev-parse --short HEAD)"
 echo "    Деплоим коммит: ${GIT_SHA}"
 

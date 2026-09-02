@@ -422,19 +422,60 @@ export function getDb(): DatabaseSchema {
     ensureDbDirectory();
     if (fs.existsSync(DB_FILE_PATH)) {
       const fileData = fs.readFileSync(DB_FILE_PATH, 'utf-8');
-      const parsed = JSON.parse(fileData);
-      if (!parsed.reports) parsed.reports = [];
-      migrateDb(parsed);
-      memoryDb = parsed;
+      try {
+        const parsed = JSON.parse(fileData);
+        if (!parsed.reports) parsed.reports = [];
+        migrateDb(parsed);
+        memoryDb = parsed;
+      } catch (parseErr) {
+        // КРИТИЧНО: файл существует, но битый. НИКОГДА не перезаписываем его сидом —
+        // сохраняем копию для ручного восстановления и только потом стартуем со свежей базой.
+        const corruptCopy = `${DB_FILE_PATH}.corrupt-${Date.now()}`;
+        try { fs.copyFileSync(DB_FILE_PATH, corruptCopy); } catch {}
+        console.error(`DB FILE CORRUPT! Копия сохранена: ${corruptCopy}`, parseErr);
+        memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
+      }
     } else {
       memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
-      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(memoryDb, null, 2), 'utf-8');
+      atomicWrite(DB_FILE_PATH, JSON.stringify(memoryDb, null, 2));
     }
   } catch (err) {
     console.warn('DB Load warning:', err);
     memoryDb = JSON.parse(JSON.stringify(INITIAL_SEED));
   }
   return memoryDb!;
+}
+
+/** Атомарная запись: сначала во временный файл, потом rename — обрыв записи не портит базу. */
+function atomicWrite(filePath: string, data: string): void {
+  const tmp = `${filePath}.tmp-${process.pid}`;
+  fs.writeFileSync(tmp, data, 'utf-8');
+  fs.renameSync(tmp, filePath);
+}
+
+/** Ежедневный ротируемый бэкап: data/backups/db-YYYY-MM-DD.json, храним последние 14. */
+const BACKUPS_DIR = path.join(path.dirname(DB_FILE_PATH), 'backups');
+let lastBackupDay = '';
+
+function dailyBackup(): void {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastBackupDay === today) return;
+    const backupPath = path.join(BACKUPS_DIR, `db-${today}.json`);
+    if (!fs.existsSync(backupPath) && fs.existsSync(DB_FILE_PATH)) {
+      fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+      fs.copyFileSync(DB_FILE_PATH, backupPath);
+      // Ротация: оставляем 14 последних
+      const files = fs.readdirSync(BACKUPS_DIR).filter(f => f.startsWith('db-')).sort();
+      while (files.length > 14) {
+        const oldest = files.shift()!;
+        try { fs.unlinkSync(path.join(BACKUPS_DIR, oldest)); } catch {}
+      }
+    }
+    lastBackupDay = today;
+  } catch (err) {
+    console.warn('DB backup warning:', err);
+  }
 }
 
 /** Мягкая миграция старых данных: заполняем новые поля значениями по умолчанию. */
@@ -456,7 +497,8 @@ export function saveDb(data: DatabaseSchema): void {
   memoryDb = data;
   try {
     ensureDbDirectory();
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    dailyBackup();
+    atomicWrite(DB_FILE_PATH, JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('Error saving DB:', err);
   }

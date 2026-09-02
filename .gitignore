@@ -33,3 +33,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# runtime data (тома/бэкапы — не коммитить)
+/data/uploads/
+/data/backups/
+/data/*.corrupt-*
+/data/*.tmp-*

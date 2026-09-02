@@ -9,7 +9,7 @@ import SearchModal from '@/components/SearchModal';
 import { 
   BookOpen, Compass, FileCheck, 
   Shield, Settings, LogOut, Search, Bell, Sun, 
-  Moon, Menu, X, ShieldAlert, GraduationCap
+  Moon, Menu, X, ShieldAlert, GraduationCap, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { isSuperAdmin, isAdmin } from '@/lib/auth-helpers';
 
@@ -294,7 +294,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-black dark:bg-black light:bg-neutral-50">
           {/* Top Bar */}
           <header className="h-14 glass-panel border-b border-neutral-800 dark:border-neutral-800 light:border-neutral-200 light:bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-1.5 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 hover:text-white"
@@ -302,9 +302,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Menu className="w-4 h-4" />
               </button>
 
+              {/* Навигация назад / вперед */}
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={() => router.back()}
+                  className="p-1.5 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 text-neutral-400 dark:text-neutral-400 light:text-neutral-600 hover:text-white dark:hover:text-white light:hover:text-black hover:bg-neutral-900 dark:hover:bg-neutral-900 light:hover:bg-neutral-100 transition-colors"
+                  title="Назад"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => router.forward()}
+                  className="p-1.5 rounded-lg border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 text-neutral-400 dark:text-neutral-400 light:text-neutral-600 hover:text-white dark:hover:text-white light:hover:text-black hover:bg-neutral-900 dark:hover:bg-neutral-900 light:hover:bg-neutral-100 transition-colors"
+                  title="Вперед"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 text-xs text-neutral-400 dark:text-neutral-400 light:text-neutral-600 hover:text-neutral-200 transition-colors w-44 sm:w-64"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900/60 dark:bg-neutral-900/60 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 text-xs text-neutral-400 dark:text-neutral-400 light:text-neutral-600 hover:text-neutral-200 transition-colors w-36 sm:w-64"
               >
                 <Search className="w-3.5 h-3.5 text-neutral-400" />
                 <span className="truncate">Поиск по базе знаний...</span>

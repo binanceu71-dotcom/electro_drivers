@@ -43,7 +43,7 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://portal.electrodrivers.ru}
     volumes:
-      - app_data:/app/data
+      - app_data:/srv/app/data
     ports:
       - "127.0.0.1:3000:3000"
     networks:
