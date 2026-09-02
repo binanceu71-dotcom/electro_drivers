@@ -41,7 +41,7 @@ RUN npm run build
 # Страховка: если корневой layout снова собрался заглушкой
 # (~150 байт вместо ~11 КБ), сборка образа обязана УПАСТЬ здесь,
 # а не доехать до прода белым экраном.
-RUN size=$(wc -c < .next/static/chunks/app/layout-*.js) && \
+RUN size=$(stat -c %s .next/static/chunks/app/layout-*.js | head -1) && \
     echo "layout chunk size: ${size} bytes" && \
     if [ "$size" -lt 5000 ]; then \
       echo "FATAL: root layout собрался клиентской заглушкой (${size} байт)."; \
