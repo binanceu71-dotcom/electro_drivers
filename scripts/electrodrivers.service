@@ -1,0 +1,36 @@
+# =============================================================================
+# systemd-юнит для запуска портала БЕЗ Docker и БЕЗ PM2 (альтернатива PM2).
+#
+# Установка:
+#   sudo cp scripts/electrodrivers.service /etc/systemd/system/
+#   # Отредактируйте WorkingDirectory/User под ваш сервер!
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now electrodrivers
+#
+# Обновление версии:
+#   cd /opt/electro_drivers && git pull && npm ci && npm run build
+#   sudo systemctl restart electrodrivers
+#   curl -s http://127.0.0.1:3000/api/version   # проверить, что сборка новая
+# =============================================================================
+[Unit]
+Description=Electrodrivers Corporate Portal (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+# ЗАМЕНИТЕ на реальный путь к репозиторию на сервере:
+WorkingDirectory=/opt/electro_drivers
+# ЗАМЕНИТЕ на пользователя, от которого работает приложение:
+User=www-data
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Environment=DATABASE_URL=postgresql://electro_admin:PASSWORD@127.0.0.1:5432/electrodrivers_db
+Environment=SESSION_SECRET=change_me_to_long_random_string
+ExecStart=/usr/bin/npx next start -p 3000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

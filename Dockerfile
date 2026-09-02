@@ -17,6 +17,11 @@ RUN mkdir -p /app/public /app/data
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Отпечаток сборки: .git не попадает в образ (см. .dockerignore),
+# поэтому SHA коммита передаётся снаружи (см. scripts/deploy.sh)
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 RUN npm run build
 
 # Stage 3: Runner

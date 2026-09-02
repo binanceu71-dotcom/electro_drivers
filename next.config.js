@@ -6,6 +6,17 @@ const nextConfig = {
   headers: async () => {
     return [
       {
+        // HTML-страницы и API никогда не должны оседать в промежуточных кэшах.
+        // Хешированная статика (/_next/static) кэшируется отдельным правилом ниже.
+        source: '/((?!_next/static|_next/image|favicon.ico).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           {

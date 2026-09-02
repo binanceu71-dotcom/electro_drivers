@@ -1,0 +1,38 @@
+# === Build context hygiene ===
+# Всё лишнее НЕ должно попадать в Docker-образ: стейл-артефакты с хоста
+# ломают сборку и приводят к "загадочным" старым бандлам в проде.
+
+# Dependencies & build artifacts (always rebuilt inside the image)
+node_modules
+.next
+out
+build
+coverage
+
+# VCS & tooling
+.git
+.gitignore
+.dockerignore
+*.log
+.eslintcache
+*.tsbuildinfo
+
+# Local data & secrets
+.env
+.env.*
+*.pem
+*.txt
+data/*.json
+data/*.bak
+
+# OS junk
+.DS_Store
+
+# Infra not needed inside the app image
+nginx
+certbot
+docker-compose.yml
+Dockerfile
+scripts
+DEPLOYMENT_GUIDE.md
+README.md
