@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromRequest } from '@/lib/auth';
+import { getSessionFromRequest, verifyPassword, hashPassword } from '@/lib/auth';
 import { updateUserProfile, findUserById, saveDb, getDb } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
@@ -17,18 +17,18 @@ export async function POST(req: NextRequest) {
       if (!current_password) {
         return NextResponse.json({ error: 'Укажите текущий пароль для смены' }, { status: 400 });
       }
-      if (new_password.length < 6) {
-        return NextResponse.json({ error: 'Новый пароль должен содержать минимум 6 символов' }, { status: 400 });
+      if (new_password.length < 8) {
+        return NextResponse.json({ error: 'Новый пароль должен содержать минимум 8 символов для безопасности' }, { status: 400 });
       }
       const rawUser = findUserById(user.id);
-      if (!rawUser || rawUser.password_hash !== current_password) {
+      if (!rawUser || !verifyPassword(current_password, rawUser.password_hash)) {
         return NextResponse.json({ error: 'Неверный текущий пароль' }, { status: 400 });
       }
 
       const db = getDb();
       const u = db.users.find(x => x.id === user.id);
       if (u) {
-        u.password_hash = new_password;
+        u.password_hash = hashPassword(new_password);
         saveDb(db);
       }
     }

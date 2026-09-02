@@ -7,7 +7,7 @@ export function isSuperAdmin(user?: UserProfile | null): boolean {
   const email = String(user.email || '').toLowerCase().trim();
 
   const isMaster = email === 'admin@electrodrivers.ru' || email === 'admin@electrodrivers.xyz' || email === 'superadmin@electrodrivers.ru';
-  const hasRole = role === 'superadmin' || role === 'admin';
+  const hasRole = role === 'superadmin';
   const isActive = status === 'active';
 
   return (isMaster || hasRole) && isActive;

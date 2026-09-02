@@ -85,16 +85,6 @@ export function verifyToken<T = any>(token: string): T | null {
       return parsed as T;
     }
 
-    // Legacy unsigned token compatibility
-    if (parts.length === 1) {
-      const jsonStr = Buffer.from(token, 'base64url').toString('utf-8');
-      const parsed = JSON.parse(jsonStr);
-      if (parsed.exp && parsed.exp < Math.floor(Date.now() / 1000)) {
-        return null;
-      }
-      return parsed as T;
-    }
-
     return null;
   } catch (err) {
     return null;
